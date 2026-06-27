@@ -208,13 +208,13 @@
         labels: s.ingresos.porMes.map(m => m.label),
         datasets: [{
           data: s.ingresos.porMes.map(m => m.total),
-          borderColor: '#6366f1',
-          backgroundColor: 'rgba(99,102,241,.08)',
+          borderColor: '#c9a35a',
+          backgroundColor: 'rgba(201,163,90,.1)',
           borderWidth: 2.5,
           fill: true,
           tension: 0.4,
           pointRadius: 4,
-          pointBackgroundColor: '#6366f1',
+          pointBackgroundColor: '#c9a35a',
           pointBorderColor: ct.ringBg,
           pointBorderWidth: 2,
           pointHoverRadius: 6,
@@ -238,7 +238,7 @@
   /* Gráfico donut — reservas */
   const donutCtx = document.getElementById('donutChart');
   const re = s.reservas;
-  const colors = ['#6366f1','#f59e0b','#ef4444'];
+  const colors = ['#c9a35a','#f59e0b','#ef4444'];
   const renderDonutChart = () => {
     if (!donutCtx || re.total <= 0) return;
     const ct = chartTheme();
@@ -283,7 +283,7 @@
       const item = document.createElement('div');
       item.className = 'event-item';
       item.innerHTML = `
-        <div class="avatar-ini" style="background:#6366f1;width:36px;height:36px;font-size:13px;border-radius:8px">${escHtml(ev.tipo.slice(0,2))}</div>
+        <div class="avatar-ini" style="background:#c9a35a;width:36px;height:36px;font-size:13px;border-radius:8px">${escHtml(ev.tipo.slice(0,2))}</div>
         <div class="event-item-info">
           <div class="event-item-name"></div>
           <div class="event-item-date">📅 ${d.getDate()} ${MESES[d.getMonth()]} · ${ev.hora||''}</div>

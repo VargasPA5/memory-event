@@ -181,7 +181,7 @@ function renderChartIngresos() {
     data: {
       labels: porMes.map(m => m.label),
       datasets: [
-        { label:'Ingresos', data: porMes.map(m => m.total), backgroundColor: 'rgba(99,102,241,.15)', borderColor:'#6366f1', borderWidth:2, borderRadius:6, hoverBackgroundColor:'rgba(99,102,241,.25)' }
+        { label:'Ingresos', data: porMes.map(m => m.total), backgroundColor: 'rgba(201,163,90,.18)', borderColor:'#c9a35a', borderWidth:2, borderRadius:6, hoverBackgroundColor:'rgba(201,163,90,.28)' }
       ]
     },
     options: {
@@ -222,7 +222,7 @@ function renderChartReservas() {
     type: 'doughnut',
     data: {
       labels: ['Confirmadas','Pendientes','Canceladas'],
-      datasets:[{ data:[re.confirmadas, re.pendientes, re.canceladas], backgroundColor:['#6366f1','#f59e0b','#ef4444'], borderColor:ct.ringBg, borderWidth:3, hoverOffset:5 }]
+      datasets:[{ data:[re.confirmadas, re.pendientes, re.canceladas], backgroundColor:['#c9a35a','#f59e0b','#ef4444'], borderColor:ct.ringBg, borderWidth:3, hoverOffset:5 }]
     },
     options: {
       responsive:true, maintainAspectRatio:false, cutout:'60%',
