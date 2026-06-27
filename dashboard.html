@@ -6,7 +6,7 @@
   <title>Memory – Dashboard</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="css/styles.css"/>
   <script src="js/theme.js"></script>
   <script src="js/logo.js"></script>
@@ -208,13 +208,13 @@
         labels: s.ingresos.porMes.map(m => m.label),
         datasets: [{
           data: s.ingresos.porMes.map(m => m.total),
-          borderColor: '#c9a35a',
-          backgroundColor: 'rgba(201,163,90,.1)',
+          borderColor: '#6d5ef8',
+          backgroundColor: 'rgba(109,94,248,.1)',
           borderWidth: 2.5,
           fill: true,
           tension: 0.4,
           pointRadius: 4,
-          pointBackgroundColor: '#c9a35a',
+          pointBackgroundColor: '#6d5ef8',
           pointBorderColor: ct.ringBg,
           pointBorderWidth: 2,
           pointHoverRadius: 6,
@@ -238,7 +238,7 @@
   /* Gráfico donut — reservas */
   const donutCtx = document.getElementById('donutChart');
   const re = s.reservas;
-  const colors = ['#c9a35a','#f59e0b','#ef4444'];
+  const colors = ['#6d5ef8','#f59e0b','#ef4444'];
   const renderDonutChart = () => {
     if (!donutCtx || re.total <= 0) return;
     const ct = chartTheme();
@@ -283,7 +283,7 @@
       const item = document.createElement('div');
       item.className = 'event-item';
       item.innerHTML = `
-        <div class="avatar-ini" style="background:#c9a35a;width:36px;height:36px;font-size:13px;border-radius:8px">${escHtml(ev.tipo.slice(0,2))}</div>
+        <div class="avatar-ini" style="background:#6d5ef8;width:36px;height:36px;font-size:13px;border-radius:8px">${escHtml(ev.tipo.slice(0,2))}</div>
         <div class="event-item-info">
           <div class="event-item-name"></div>
           <div class="event-item-date">📅 ${d.getDate()} ${MESES[d.getMonth()]} · ${ev.hora||''}</div>

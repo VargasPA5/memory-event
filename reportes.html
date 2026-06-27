@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Memory – Reportes</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="css/styles.css"/>
   <script src="js/theme.js"></script>
   <script src="js/logo.js"></script>
@@ -181,7 +181,7 @@ function renderChartIngresos() {
     data: {
       labels: porMes.map(m => m.label),
       datasets: [
-        { label:'Ingresos', data: porMes.map(m => m.total), backgroundColor: 'rgba(201,163,90,.18)', borderColor:'#c9a35a', borderWidth:2, borderRadius:6, hoverBackgroundColor:'rgba(201,163,90,.28)' }
+        { label:'Ingresos', data: porMes.map(m => m.total), backgroundColor: 'rgba(109,94,248,.18)', borderColor:'#6d5ef8', borderWidth:2, borderRadius:6, hoverBackgroundColor:'rgba(109,94,248,.28)' }
       ]
     },
     options: {
@@ -222,7 +222,7 @@ function renderChartReservas() {
     type: 'doughnut',
     data: {
       labels: ['Confirmadas','Pendientes','Canceladas'],
-      datasets:[{ data:[re.confirmadas, re.pendientes, re.canceladas], backgroundColor:['#c9a35a','#f59e0b','#ef4444'], borderColor:ct.ringBg, borderWidth:3, hoverOffset:5 }]
+      datasets:[{ data:[re.confirmadas, re.pendientes, re.canceladas], backgroundColor:['#6d5ef8','#f59e0b','#ef4444'], borderColor:ct.ringBg, borderWidth:3, hoverOffset:5 }]
     },
     options: {
       responsive:true, maintainAspectRatio:false, cutout:'60%',
