@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Memory – Proveedores</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="css/styles.css"/>
+  <script src="js/theme.js"></script>
+  <script src="js/logo.js"></script>
+</head>
+<body>
+<div class="layout">
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+  <main class="main" id="main">
+    <div class="page-wrapper">
+
+      <div class="page-header">
+        <div><h1>Proveedores</h1><p>Gestiona la información de tus proveedores de servicios.</p></div>
+        <div class="page-actions">
+          <button class="btn btn--outline" onclick="exportarCSV()">
+            <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+            Exportar
+          </button>
+          <button class="btn btn--primary" onclick="abrirModal()">
+            <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/></svg>
+            Nuevo Proveedor
+          </button>
+        </div>
+      </div>
+
+      <!-- KPIs -->
+      <div class="kpi-grid" style="grid-template-columns:repeat(4,1fr)">
+        <div class="kpi-card">
+          <div class="kpi-top"><div class="kpi-icon kpi-icon--blue"><svg viewBox="0 0 20 20" fill="currentColor"><path d="M8 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM15 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z"/><path d="M3 4a1 1 0 00-1 1v10a1 1 0 001 1h1.05a2.5 2.5 0 014.9 0H10a1 1 0 001-1V5a1 1 0 00-1-1H3zM14 7a1 1 0 00-1 1v6.05A2.5 2.5 0 0115.95 16H17a1 1 0 001-1v-5a1 1 0 00-.293-.707l-2-2A1 1 0 0015 7h-1z"/></svg></div></div>
+          <div class="kpi-bottom"><div class="kpi-value" id="kTotal">—</div><div class="kpi-label">Total Proveedores</div></div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-top"><div class="kpi-icon kpi-icon--green"><svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg></div></div>
+          <div class="kpi-bottom"><div class="kpi-value" id="kActivos">—</div><div class="kpi-label">Activos</div></div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-top"><div class="kpi-icon kpi-icon--red"><svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/></svg></div></div>
+          <div class="kpi-bottom"><div class="kpi-value" id="kInactivos">—</div><div class="kpi-label">Inactivos</div></div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-top"><div class="kpi-icon kpi-icon--purple"><svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"/></svg></div></div>
+          <div class="kpi-bottom"><div class="kpi-value" id="kTipos">—</div><div class="kpi-label">Tipos de Servicio</div></div>
+        </div>
+      </div>
+
+      <!-- Toolbar -->
+      <div class="toolbar">
+        <div class="search-box">
+          <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd"/></svg>
+          <input type="text" id="searchInput" placeholder="Buscar proveedor…" oninput="renderTabla()"/>
+        </div>
+        <select class="filter-select" id="filtroTipo" onchange="renderTabla()">
+          <option value="">Todos los tipos</option>
+          <option>Decoración</option><option>Catering</option><option>Música</option><option>Fotografía</option><option>Coordinación</option><option>Otros</option>
+        </select>
+        <select class="filter-select" id="filtroEstado" onchange="renderTabla()">
+          <option value="">Todos los estados</option>
+          <option>Activo</option><option>Inactivo</option>
+        </select>
+      </div>
+
+      <!-- Tabla -->
+      <div class="tbl-wrap">
+        <table class="tbl">
+          <thead>
+            <tr><th>Proveedor</th><th>Contacto</th><th>Teléfono</th><th>Email</th><th>Tipo</th><th>Estado</th><th>Registrado</th><th>Acciones</th></tr>
+          </thead>
+          <tbody id="tablaBody"></tbody>
+        </table>
+        <div class="tbl-pagination">
+          <span id="paginacionInfo">—</span>
+          <div class="pag-btns"><button class="pag-btn active">1</button></div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modalTitulo">Nuevo Proveedor</h3>
+      <button class="modal-close" onclick="cerrarModal()">✕</button>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Nombre *</label><input type="text" class="form-input" id="fNombre" placeholder="Nombre del proveedor"/></div>
+      <div class="form-group"><label>Tipo de Servicio</label><select class="form-select" id="fTipo"><option>Decoración</option><option>Catering</option><option>Música</option><option>Fotografía</option><option>Coordinación</option><option>Otros</option></select></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Contacto</label><input type="text" class="form-input" id="fContacto" placeholder="Nombre del contacto"/></div>
+      <div class="form-group"><label>Teléfono</label><input type="text" class="form-input" id="fTelefono" placeholder="987 000 000"/></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Email</label><input type="email" class="form-input" id="fEmail" placeholder="proveedor@email.com"/></div>
+      <div class="form-group"><label>Estado</label><select class="form-select" id="fEstado"><option>Activo</option><option>Inactivo</option></select></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn--outline" onclick="cerrarModal()">Cancelar</button>
+      <button class="btn btn--primary" onclick="guardarProveedor()">Guardar Proveedor</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+<script src="js/storage.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/data.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/app.js"></script>
+<script>
+let editandoId = null;
+
+function renderTabla() {
+  const txt    = (document.getElementById('searchInput').value||'').toLowerCase();
+  const tipo   = document.getElementById('filtroTipo').value;
+  const estado = document.getElementById('filtroEstado').value;
+  const tbody  = document.getElementById('tablaBody');
+
+  const todos = Data.proveedores.getAll();
+  const filtrados = todos.filter(p =>
+    (p.nombre.toLowerCase().includes(txt) || (p.contacto||'').toLowerCase().includes(txt)) &&
+    (!tipo   || p.tipo   === tipo) &&
+    (!estado || p.estado === estado)
+  );
+
+  const tiposUnicos = new Set(todos.map(p=>p.tipo)).size;
+  document.getElementById('kTotal').textContent    = todos.length;
+  document.getElementById('kActivos').textContent  = todos.filter(p=>p.estado==='Activo').length;
+  document.getElementById('kInactivos').textContent= todos.filter(p=>p.estado==='Inactivo').length;
+  document.getElementById('kTipos').textContent    = tiposUnicos;
+  document.getElementById('paginacionInfo').textContent = `Mostrando ${filtrados.length} de ${todos.length} proveedores`;
+
+  tbody.innerHTML = '';
+  if (!filtrados.length) { tbody.innerHTML = emptyState('No se encontraron proveedores.'); return; }
+
+  filtrados.forEach(p => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><div class="client-cell">${avatarEl(p.nombre, p.id)}<strong class="p-nombre"></strong></div></td>
+      <td class="p-contacto"></td>
+      <td class="p-tel"></td>
+      <td class="p-email"></td>
+      <td>${badge(p.tipo)}</td>
+      <td>${badge(p.estado)}</td>
+      <td>${Fmt.date(p.createdAt)}</td>
+      <td>
+        <div class="actions">
+          <button class="action-btn" title="Editar" onclick="editarProveedor(${p.id})">
+            <svg viewBox="0 0 20 20" fill="currentColor"><path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/></svg>
+          </button>
+          <button class="action-btn delete" title="Eliminar" onclick="pedirEliminar(${p.id})">
+            <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+          </button>
+        </div>
+      </td>`;
+    tr.querySelector('.p-nombre').textContent  = p.nombre;
+    tr.querySelector('.p-contacto').textContent= p.contacto||'—';
+    tr.querySelector('.p-tel').textContent     = p.telefono||'—';
+    tr.querySelector('.p-email').textContent   = p.email||'—';
+    tbody.appendChild(tr);
+  });
+}
+
+function abrirModal() {
+  editandoId = null;
+  document.getElementById('modalTitulo').textContent = 'Nuevo Proveedor';
+  limpiarForm();
+  document.getElementById('modalOverlay').classList.add('modal-overlay--open');
+  setTimeout(() => document.getElementById('fNombre').focus(), 50);
+}
+function cerrarModal() { document.getElementById('modalOverlay').classList.remove('modal-overlay--open'); }
+document.getElementById('modalOverlay').addEventListener('click', e => { if (e.target.id==='modalOverlay') cerrarModal(); });
+
+function limpiarForm() {
+  ['fNombre','fContacto','fTelefono','fEmail'].forEach(id => document.getElementById(id).value='');
+  document.getElementById('fTipo').selectedIndex=0;
+  document.getElementById('fEstado').selectedIndex=0;
+}
+
+function guardarProveedor() {
+  const nombre   = document.getElementById('fNombre').value.trim();
+  const tipo     = document.getElementById('fTipo').value;
+  const contacto = document.getElementById('fContacto').value.trim();
+  const telefono = document.getElementById('fTelefono').value.trim();
+  const email    = document.getElementById('fEmail').value.trim();
+  const estado   = document.getElementById('fEstado').value;
+
+  if (!nombre) { Toast.error('El nombre es obligatorio'); return; }
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { Toast.error('El email del proveedor no es válido'); return; }
+
+  const dupNombre = Data.proveedores.getAll().find(p => p.nombre.toLowerCase() === nombre.toLowerCase() && p.id !== editandoId);
+  if (dupNombre) { Toast.error('Ya existe un proveedor con ese nombre'); return; }
+
+  if (editandoId !== null) {
+    Data.proveedores.update(editandoId, { nombre, tipo, contacto, telefono, email, estado });
+    Toast.success('Proveedor actualizado ✓');
+  } else {
+    Data.proveedores.create({ nombre, tipo, contacto, telefono, email, estado });
+    Toast.success('Proveedor guardado ✓');
+  }
+  cerrarModal();
+  renderTabla();
+}
+
+function editarProveedor(id) {
+  const p = Data.proveedores.find(id);
+  if (!p) return;
+  editandoId = id;
+  document.getElementById('modalTitulo').textContent = 'Editar Proveedor';
+  document.getElementById('fNombre').value   = p.nombre;
+  document.getElementById('fTipo').value     = p.tipo;
+  document.getElementById('fContacto').value = p.contacto||'';
+  document.getElementById('fTelefono').value = p.telefono||'';
+  document.getElementById('fEmail').value    = p.email||'';
+  document.getElementById('fEstado').value   = p.estado;
+  document.getElementById('modalOverlay').classList.add('modal-overlay--open');
+}
+
+async function pedirEliminar(id) {
+  const ok = await Confirm({ title:'¿Eliminar proveedor?', message:'Esta acción no se puede deshacer.', okText:'Sí, eliminar' });
+  if (!ok) return;
+  Data.proveedores.delete(id);
+  renderTabla();
+  Toast.success('Proveedor eliminado');
+}
+
+function exportarCSV() {
+  const rows = [['ID','Nombre','Tipo','Contacto','Teléfono','Email','Estado']];
+  Data.proveedores.getAll().forEach(p => rows.push([p.id,`"${p.nombre}"`,p.tipo,`"${p.contacto||''}"`,p.telefono||'',p.email||'',p.estado]));
+  const csv = rows.map(r=>r.join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent('﻿'+csv);
+  a.download = 'proveedores.csv'; a.click();
+  Toast.success('CSV exportado ✓');
+}
+
+renderTabla();
+</script>
+</body>
+</html>

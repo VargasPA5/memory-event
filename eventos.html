@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Memory – Eventos</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="css/styles.css"/>
+  <script src="js/theme.js"></script>
+  <script src="js/logo.js"></script>
+</head>
+<body>
+<div class="layout">
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+  <main class="main" id="main">
+    <div class="page-wrapper">
+
+      <div class="page-header">
+        <div><h1>Eventos</h1><p>Administra los eventos y actividades programadas.</p></div>
+        <div class="page-actions">
+          <button class="btn btn--outline" onclick="exportarCSV()">
+            <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+            Exportar
+          </button>
+          <button class="btn btn--primary" onclick="abrirModal()">
+            <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/></svg>
+            Nuevo Evento
+          </button>
+        </div>
+      </div>
+
+      <!-- KPIs -->
+      <div class="kpi-grid" style="grid-template-columns:repeat(4,1fr)">
+        <div class="kpi-card">
+          <div class="kpi-top"><div class="kpi-icon kpi-icon--green"><svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd"/></svg></div></div>
+          <div class="kpi-bottom"><div class="kpi-value" id="kTotal">—</div><div class="kpi-label">Total Eventos</div></div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-top"><div class="kpi-icon kpi-icon--indigo"><svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg></div></div>
+          <div class="kpi-bottom"><div class="kpi-value" id="kConfirmados">—</div><div class="kpi-label">Confirmados</div></div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-top"><div class="kpi-icon kpi-icon--yellow"><svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"/></svg></div></div>
+          <div class="kpi-bottom"><div class="kpi-value" id="kPendientes">—</div><div class="kpi-label">Pendientes</div></div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-top"><div class="kpi-icon kpi-icon--red"><svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/></svg></div></div>
+          <div class="kpi-bottom"><div class="kpi-value" id="kCancelados">—</div><div class="kpi-label">Cancelados</div></div>
+        </div>
+      </div>
+
+      <!-- Toolbar -->
+      <div class="toolbar">
+        <div class="search-box">
+          <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd"/></svg>
+          <input type="text" id="searchInput" placeholder="Buscar evento…" oninput="renderTabla()"/>
+        </div>
+        <select class="filter-select" id="filtroTipo" onchange="renderTabla()">
+          <option value="">Todos los tipos</option>
+          <option>Boda</option><option>Cumpleaños</option><option>Corporativo</option><option>Graduación</option><option>Quinceañero</option><option>Otros</option>
+        </select>
+        <select class="filter-select" id="filtroEstado" onchange="renderTabla()">
+          <option value="">Todos los estados</option>
+          <option>Confirmado</option><option>Pendiente</option><option>Cancelado</option>
+        </select>
+      </div>
+
+      <!-- Tabla -->
+      <div class="tbl-wrap">
+        <table class="tbl">
+          <thead>
+            <tr><th>Evento</th><th>Cliente</th><th>Tipo</th><th>Fecha</th><th>Hora</th><th>Invitados</th><th>Estado</th><th>Presupuesto</th><th>Acciones</th></tr>
+          </thead>
+          <tbody id="tablaBody"></tbody>
+        </table>
+        <div class="tbl-pagination">
+          <span id="paginacionInfo">—</span>
+          <div class="pag-btns"><button class="pag-btn active">1</button></div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modalTitulo">Nuevo Evento</h3>
+      <button class="modal-close" onclick="cerrarModal()">✕</button>
+    </div>
+    <div class="form-group"><label>Nombre del Evento *</label><input type="text" class="form-input" id="fNombre" placeholder="Ej: Boda de Ana y Luis"/></div>
+    <div class="form-row">
+      <div class="form-group"><label>Tipo</label><select class="form-select" id="fTipo"><option>Boda</option><option>Cumpleaños</option><option>Corporativo</option><option>Graduación</option><option>Quinceañero</option><option>Otros</option></select></div>
+      <div class="form-group"><label>Cliente</label><select class="form-select" id="fCliente"></select></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Fecha *</label><input type="date" class="form-input" id="fFecha"/></div>
+      <div class="form-group"><label>Hora</label><input type="time" class="form-input" id="fHora"/></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>N° Invitados</label><input type="number" class="form-input" id="fInvitados" placeholder="0" min="0"/></div>
+      <div class="form-group"><label>Presupuesto (S/)</label><input type="number" class="form-input" id="fPresupuesto" placeholder="0.00" min="0"/></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Lugar</label><input type="text" class="form-input" id="fLugar" placeholder="Dirección del evento"/></div>
+      <div class="form-group"><label>Estado</label><select class="form-select" id="fEstado"><option>Confirmado</option><option>Pendiente</option><option>Cancelado</option></select></div>
+    </div>
+    <div class="form-group"><label>Notas</label><textarea class="form-input form-textarea" id="fNotas" placeholder="Observaciones adicionales…" rows="2"></textarea></div>
+    <div class="modal-footer">
+      <button class="btn btn--outline" onclick="cerrarModal()">Cancelar</button>
+      <button class="btn btn--primary" onclick="guardarEvento()">Guardar Evento</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de Anexos -->
+<div class="modal-overlay" id="anexosOverlay">
+  <div class="modal" style="max-width:540px">
+    <div class="modal-header">
+      <h3>Anexos del evento</h3>
+      <button class="modal-close" onclick="cerrarAnexos()">✕</button>
+    </div>
+    <div class="form-group">
+      <label>Subir imagen o video</label>
+      <input type="file" id="anexoFile" class="form-input" accept="image/*,video/*"/>
+    </div>
+    <div id="anexoProgress" style="display:none;font-size:12.5px;color:var(--txt-muted);margin:-6px 0 12px">Subiendo… <span id="anexoPct">0%</span></div>
+    <div id="anexosGrid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:4px"></div>
+    <div class="modal-footer">
+      <button class="btn btn--outline" onclick="cerrarAnexos()">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+<script src="js/storage.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/data.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/app.js"></script>
+<script>
+let editandoId = null;
+
+function poblarClientes() {
+  const sel = document.getElementById('fCliente');
+  sel.innerHTML = '';
+  Data.clientes.getAll().forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = c.id;
+    opt.textContent = c.nombre;
+    sel.appendChild(opt);
+  });
+}
+
+function renderTabla() {
+  const txt    = (document.getElementById('searchInput').value || '').toLowerCase();
+  const tipo   = document.getElementById('filtroTipo').value;
+  const estado = document.getElementById('filtroEstado').value;
+  const tbody  = document.getElementById('tablaBody');
+
+  const todos = Data.eventos.getAll();
+  const filtrados = todos.filter(e =>
+    e.nombre.toLowerCase().includes(txt) &&
+    (!tipo   || e.tipo   === tipo) &&
+    (!estado || e.estado === estado)
+  );
+
+  document.getElementById('kTotal').textContent      = todos.length;
+  document.getElementById('kConfirmados').textContent = todos.filter(e=>e.estado==='Confirmado').length;
+  document.getElementById('kPendientes').textContent  = todos.filter(e=>e.estado==='Pendiente').length;
+  document.getElementById('kCancelados').textContent  = todos.filter(e=>e.estado==='Cancelado').length;
+  document.getElementById('paginacionInfo').textContent = `Mostrando ${filtrados.length} de ${todos.length} eventos`;
+
+  tbody.innerHTML = '';
+  if (!filtrados.length) { tbody.innerHTML = emptyState('No se encontraron eventos.'); return; }
+
+  filtrados.sort((a,b) => new Date(a.fecha) - new Date(b.fecha)).forEach(ev => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><div class="item-cell"><div class="avatar-ini" style="background:var(--indigo);border-radius:8px;font-size:11px"></div><div class="item-cell-info"><span class="item-cell-name ev-nombre"></span></div></div></td>
+      <td class="ev-cliente"></td>
+      <td>${badge(ev.tipo)}</td>
+      <td>${Fmt.dateShort(ev.fecha)}</td>
+      <td>${ev.hora || '—'}</td>
+      <td>${ev.invitados || '—'}</td>
+      <td>${badge(ev.estado)}</td>
+      <td><strong>${Fmt.currency(ev.presupuesto)}</strong></td>
+      <td>
+        <div class="actions">
+          <button class="action-btn" title="Anexos" onclick="abrirAnexos(${ev.id})">
+            <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8 4a3 3 0 016 0v8a5 5 0 11-10 0V6a1 1 0 112 0v6a3 3 0 106 0V4a1 1 0 10-2 0v8a1 1 0 11-2 0V4z" clip-rule="evenodd"/></svg>
+          </button>
+          <button class="action-btn" title="Editar" onclick="editarEvento(${ev.id})">
+            <svg viewBox="0 0 20 20" fill="currentColor"><path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/></svg>
+          </button>
+          <button class="action-btn delete" title="Eliminar" onclick="pedirEliminar(${ev.id})">
+            <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+          </button>
+        </div>
+      </td>`;
+    tr.querySelector('.avatar-ini').textContent = ev.tipo.slice(0,2);
+    tr.querySelector('.ev-nombre').textContent = ev.nombre;
+    tr.querySelector('.ev-cliente').textContent = Data.clienteNombre(ev.clienteId);
+    tbody.appendChild(tr);
+  });
+}
+
+function abrirModal() {
+  editandoId = null;
+  document.getElementById('modalTitulo').textContent = 'Nuevo Evento';
+  limpiarForm();
+  poblarClientes();
+  document.getElementById('modalOverlay').classList.add('modal-overlay--open');
+  setTimeout(() => document.getElementById('fNombre').focus(), 50);
+}
+function cerrarModal() {
+  document.getElementById('modalOverlay').classList.remove('modal-overlay--open');
+}
+document.getElementById('modalOverlay').addEventListener('click', e => { if (e.target.id === 'modalOverlay') cerrarModal(); });
+
+function limpiarForm() {
+  ['fNombre','fFecha','fHora','fInvitados','fPresupuesto','fLugar','fNotas'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('fTipo').selectedIndex = 0;
+  document.getElementById('fEstado').selectedIndex = 0;
+}
+
+function guardarEvento() {
+  const nombre     = document.getElementById('fNombre').value.trim();
+  const tipo       = document.getElementById('fTipo').value;
+  const clienteId  = parseInt(document.getElementById('fCliente').value) || null;
+  const fecha      = document.getElementById('fFecha').value;
+  const hora       = document.getElementById('fHora').value;
+  const invitados  = parseInt(document.getElementById('fInvitados').value) || 0;
+  const presupuesto= parseFloat(document.getElementById('fPresupuesto').value) || 0;
+  const lugar      = document.getElementById('fLugar').value.trim();
+  const estado     = document.getElementById('fEstado').value;
+  const notas      = document.getElementById('fNotas').value.trim();
+
+  if (!nombre) { Toast.error('El nombre es obligatorio'); return; }
+  if (!fecha)  { Toast.error('La fecha es obligatoria'); return; }
+
+  const hoy = new Date().toISOString().split('T')[0];
+  if (editandoId === null && fecha < hoy) {
+    Toast.error('La fecha del evento no puede ser en el pasado');
+    return;
+  }
+
+  if (editandoId !== null) {
+    Data.eventos.update(editandoId, { nombre, tipo, clienteId, fecha, hora, invitados, presupuesto, lugar, estado, notas });
+    Toast.success('Evento actualizado ✓');
+  } else {
+    Data.eventos.create({ nombre, tipo, clienteId, fecha, hora, invitados, presupuesto, lugar, estado, notas });
+    Toast.success('Evento guardado ✓');
+  }
+  cerrarModal();
+  renderTabla();
+}
+
+function editarEvento(id) {
+  const ev = Data.eventos.find(id);
+  if (!ev) return;
+  editandoId = id;
+  poblarClientes();
+  document.getElementById('modalTitulo').textContent = 'Editar Evento';
+  document.getElementById('fNombre').value     = ev.nombre;
+  document.getElementById('fTipo').value       = ev.tipo;
+  document.getElementById('fCliente').value    = ev.clienteId || '';
+  document.getElementById('fFecha').value      = ev.fecha || '';
+  document.getElementById('fHora').value       = ev.hora || '';
+  document.getElementById('fInvitados').value  = ev.invitados || '';
+  document.getElementById('fPresupuesto').value= ev.presupuesto || '';
+  document.getElementById('fLugar').value      = ev.lugar || '';
+  document.getElementById('fEstado').value     = ev.estado;
+  document.getElementById('fNotas').value      = ev.notas || '';
+  document.getElementById('modalOverlay').classList.add('modal-overlay--open');
+}
+
+async function pedirEliminar(id) {
+  const dep = Data.depEvento(id);
+  if (dep.reservas) {
+    Toast.warning(`No se puede eliminar: tiene ${dep.reservas} reserva${dep.reservas>1?'s':''} asociadas`);
+    return;
+  }
+  const ok = await Confirm({ title:'¿Eliminar evento?', message:'Esta acción no se puede deshacer.', okText:'Sí, eliminar' });
+  if (!ok) return;
+  Data.eventos.delete(id);
+  renderTabla();
+  Toast.success('Evento eliminado');
+}
+
+function exportarCSV() {
+  const rows = [['ID','Nombre','Tipo','Cliente','Fecha','Hora','Invitados','Estado','Presupuesto']];
+  Data.eventos.getAll().forEach(e => rows.push([e.id,`"${e.nombre}"`,e.tipo,`"${Data.clienteNombre(e.clienteId)}"`,e.fecha,e.hora||'',e.invitados||0,e.estado,e.presupuesto||0]));
+  const csv = rows.map(r=>r.join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent('﻿'+csv);
+  a.download = 'eventos.csv'; a.click();
+  Toast.success('CSV exportado ✓');
+}
+
+renderTabla();
+</script>
+
+<script type="module">
+  import { storage } from './js/firebase.js';
+  import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js';
+
+  const MAX_MB = 50;
+  let anexoEventoId = null;
+
+  function renderAnexos() {
+    const ev = Data.eventos.find(anexoEventoId);
+    const grid = document.getElementById('anexosGrid');
+    grid.innerHTML = '';
+    const anexos = ev?.anexos || [];
+    if (!anexos.length) {
+      grid.innerHTML = '<p style="font-size:13px;color:var(--txt-muted);grid-column:1/-1;padding:8px 0">Sin anexos todavía.</p>';
+      return;
+    }
+    anexos.forEach((a, idx) => {
+      const cell = document.createElement('div');
+      cell.style.cssText = 'position:relative;border-radius:8px;overflow:hidden;border:1px solid var(--card-border);aspect-ratio:1/1;background:#0d0d0f';
+      const media = a.tipo === 'video'
+        ? `<video src="${a.url}" style="width:100%;height:100%;object-fit:cover" muted></video>`
+        : `<img src="${a.url}" alt="${escHtml(a.nombre || '')}" style="width:100%;height:100%;object-fit:cover"/>`;
+      cell.innerHTML = `${media}<button type="button" data-idx="${idx}" class="anexo-del" title="Eliminar" style="position:absolute;top:4px;right:4px;background:rgba(0,0,0,.6);border:none;color:#fff;border-radius:6px;width:22px;height:22px;cursor:pointer;font-size:13px;line-height:1">✕</button>`;
+      grid.appendChild(cell);
+    });
+    grid.querySelectorAll('.anexo-del').forEach(btn => {
+      btn.addEventListener('click', () => eliminarAnexo(parseInt(btn.dataset.idx)));
+    });
+  }
+
+  window.abrirAnexos = function (id) {
+    anexoEventoId = id;
+    renderAnexos();
+    document.getElementById('anexosOverlay').classList.add('modal-overlay--open');
+  };
+
+  window.cerrarAnexos = function () {
+    document.getElementById('anexosOverlay').classList.remove('modal-overlay--open');
+    document.getElementById('anexoFile').value = '';
+    document.getElementById('anexoProgress').style.display = 'none';
+  };
+
+  document.getElementById('anexosOverlay').addEventListener('click', e => { if (e.target.id === 'anexosOverlay') cerrarAnexos(); });
+
+  const leerComoDataURL = (file) => new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload  = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+
+  const LOCAL_FALLBACK_MAX_MB = 4;
+  const guardarAnexoLocal = async (file, esVideo, progEl, pctEl, e) => {
+    if (file.size > LOCAL_FALLBACK_MAX_MB * 1024 * 1024) {
+      Toast.error(`No se pudo subir a Firebase Storage y el archivo es demasiado grande (>${LOCAL_FALLBACK_MAX_MB}MB) para guardarlo localmente`);
+      progEl.style.display = 'none';
+      e.target.value = '';
+      return;
+    }
+    try {
+      pctEl.textContent = '…';
+      const url = await leerComoDataURL(file);
+      const ev = Data.eventos.find(anexoEventoId);
+      const anexos = [...(ev.anexos || []), { url, path: null, tipo: esVideo ? 'video' : 'imagen', nombre: file.name, fecha: new Date().toISOString() }];
+      Data.eventos.update(anexoEventoId, { anexos });
+      progEl.style.display = 'none';
+      e.target.value = '';
+      renderAnexos();
+      Toast.success('Anexo guardado ✓');
+    } catch {
+      Toast.error('No se pudo guardar el anexo');
+      progEl.style.display = 'none';
+      e.target.value = '';
+    }
+  };
+
+  document.getElementById('anexoFile').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const esImagen = file.type.startsWith('image/');
+    const esVideo = file.type.startsWith('video/');
+    if (!esImagen && !esVideo) { Toast.error('Solo se permiten imágenes o videos'); e.target.value = ''; return; }
+    if (file.size > MAX_MB * 1024 * 1024) { Toast.error(`El archivo no debe superar ${MAX_MB}MB`); e.target.value = ''; return; }
+
+    const path = `anexos/${anexoEventoId}/${Date.now()}_${file.name}`;
+    const sref = ref(storage, path);
+    const tarea = uploadBytesResumable(sref, file);
+    const progEl = document.getElementById('anexoProgress');
+    const pctEl = document.getElementById('anexoPct');
+    progEl.style.display = 'block';
+
+    tarea.on('state_changed', snap => {
+      pctEl.textContent = Math.round((snap.bytesTransferred / snap.totalBytes) * 100) + '%';
+    }, () => {
+      // Si Firebase Storage falla (reglas, cuota, conexión), se guarda localmente como respaldo
+      guardarAnexoLocal(file, esVideo, progEl, pctEl, e);
+    }, async () => {
+      const url = await getDownloadURL(sref);
+      const ev = Data.eventos.find(anexoEventoId);
+      const anexos = [...(ev.anexos || []), { url, path, tipo: esVideo ? 'video' : 'imagen', nombre: file.name, fecha: new Date().toISOString() }];
+      Data.eventos.update(anexoEventoId, { anexos });
+      progEl.style.display = 'none';
+      e.target.value = '';
+      renderAnexos();
+      Toast.success('Anexo subido ✓');
+    });
+  });
+
+  async function eliminarAnexo(idx) {
+    const ev = Data.eventos.find(anexoEventoId);
+    const anexo = ev?.anexos?.[idx];
+    if (!anexo) return;
+    const ok = await Confirm({ title: '¿Eliminar anexo?', message: 'Esta acción no se puede deshacer.', okText: 'Sí, eliminar' });
+    if (!ok) return;
+    try { await deleteObject(ref(storage, anexo.path)); } catch {}
+    const anexos = ev.anexos.filter((_, i) => i !== idx);
+    Data.eventos.update(anexoEventoId, { anexos });
+    renderAnexos();
+    Toast.success('Anexo eliminado');
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Memory – Mi Perfil</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="css/styles.css"/>
+  <script src="js/theme.js"></script>
+  <script src="js/logo.js"></script>
+  <style>
+    .profile-grid { display: grid; grid-template-columns: 1fr 300px; gap: 16px; align-items: start; }
+    @media (max-width: 900px) { .profile-grid { grid-template-columns: 1fr; } }
+
+    .profile-hero {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      padding: 24px;
+      margin-bottom: 16px;
+      background: linear-gradient(135deg, #0a0a0b 0%, #1a1033 100%);
+      border-radius: var(--radius-lg);
+      border: 1px solid rgba(255,255,255,.08);
+    }
+    .hero-avatar-wrap { position: relative; flex-shrink: 0; }
+    .hero-avatar {
+      width: 72px; height: 72px; border-radius: 18px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 26px; font-weight: 700; color: #fff;
+      flex-shrink: 0;
+      border: 2px solid rgba(255,255,255,.12);
+      overflow: hidden;
+      object-fit: cover;
+    }
+    .hero-avatar-edit {
+      position: absolute; bottom: -4px; right: -4px;
+      width: 26px; height: 26px; border-radius: 50%;
+      background: var(--accent); color: #fff; border: 2px solid #0a0a0b;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; transition: background .15s;
+    }
+    .hero-avatar-edit:hover { background: var(--accent-hover); }
+    .hero-avatar-edit svg { width: 13px; height: 13px; }
+    .hero-avatar-edit.is-disabled { pointer-events: none; opacity: .4; }
+    .hero-avatar-col { display: flex; flex-direction: column; align-items: center; gap: 7px; flex-shrink: 0; }
+    .hero-avatar-overlay {
+      position: absolute; inset: 0; border-radius: 18px;
+      background: rgba(8,8,12,.6);
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+    }
+    .hero-avatar-overlay[hidden] { display: none; }
+    #avatarRingProgress { transition: stroke-dashoffset .2s linear; }
+    .avatar-pct { font-size: 10.5px; font-weight: 700; color: #fff; }
+    .avatar-remove-link {
+      background: none; border: none; padding: 0;
+      font-size: 11.5px; font-weight: 600; color: rgba(255,255,255,.5);
+      text-decoration: underline; cursor: pointer; transition: color .15s;
+    }
+    .avatar-remove-link:hover { color: #f87171; }
+    .hero-info { flex: 1; min-width: 0; }
+    .hero-name { font-size: 20px; font-weight: 700; color: #f1f5f9; margin-bottom: 4px; }
+    .hero-role { display: flex; align-items: center; gap: 8px; }
+    .hero-username { font-size: 13px; color: #94a3b8; margin-top: 4px; }
+    .hero-actions { display: flex; gap: 8px; flex-shrink: 0; }
+    @media (max-width: 600px) { .profile-hero { flex-direction: column; align-items: flex-start; } }
+
+    .info-rows { display: flex; flex-direction: column; gap: 0; }
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--card-border);
+      font-size: 13.5px;
+    }
+    .info-row:last-child { border-bottom: none; }
+    .info-row-label { color: var(--txt-secondary); }
+    .info-row-value { font-weight: 600; color: var(--txt-primary); text-align: right; }
+
+    .section-card { margin-bottom: 16px; }
+
+    .pwd-strength { height: 3px; border-radius: 2px; background: var(--card-border); margin-top: 6px; overflow: hidden; }
+    .pwd-strength-bar { height: 100%; border-radius: 2px; transition: width .3s, background .3s; }
+  </style>
+</head>
+<body>
+<div class="layout">
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+  <main class="main" id="main">
+    <div class="page-wrapper">
+
+      <div class="page-header">
+        <div><h1>Mi Perfil</h1><p>Gestiona tu información personal y seguridad de cuenta.</p></div>
+      </div>
+
+      <!-- Hero card -->
+      <div class="profile-hero">
+        <div class="hero-avatar-col">
+          <div class="hero-avatar-wrap">
+            <div class="hero-avatar" id="heroAvatar"></div>
+            <div class="hero-avatar-overlay" id="avatarOverlay" hidden>
+              <svg width="40" height="40" viewBox="0 0 36 36">
+                <circle cx="18" cy="18" r="15.5" fill="none" stroke="rgba(255,255,255,.25)" stroke-width="3"/>
+                <circle cx="18" cy="18" r="15.5" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round"
+                        id="avatarRingProgress" transform="rotate(-90 18 18)"/>
+              </svg>
+              <span class="avatar-pct" id="avatarPct">0%</span>
+            </div>
+            <label class="hero-avatar-edit" id="avatarEditBtn" title="Cambiar foto de perfil">
+              <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M2 6a2 2 0 012-2h1.586a1 1 0 00.707-.293l.828-.828A2 2 0 018.828 2h2.344a2 2 0 011.414.586l.828.828A1 1 0 0014.12 4H16a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zm8 2a3 3 0 100 6 3 3 0 000-6z" clip-rule="evenodd"/></svg>
+              <input type="file" id="avatarFile" accept="image/*" style="display:none"/>
+            </label>
+          </div>
+          <button type="button" class="avatar-remove-link" id="avatarRemoveBtn" hidden>Quitar foto</button>
+        </div>
+        <div class="hero-info">
+          <div class="hero-name" id="heroNombre">—</div>
+          <div class="hero-role">
+            <span id="heroRolBadge"></span>
+          </div>
+          <div class="hero-username" id="heroUsername">—</div>
+        </div>
+      </div>
+
+      <div class="profile-grid">
+        <!-- Columna principal -->
+        <div>
+          <!-- Información personal -->
+          <div class="card section-card">
+            <div class="card-header">
+              <h3>Información personal</h3>
+            </div>
+            <div class="card-body">
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Nombre completo *</label>
+                  <input type="text" class="form-input" id="fNombre" placeholder="Tu nombre completo"/>
+                </div>
+                <div class="form-group">
+                  <label>Cargo / Puesto</label>
+                  <input type="text" class="form-input" id="fCargo" placeholder="Ej: Coordinador de eventos"/>
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Email *</label>
+                  <input type="email" class="form-input" id="fEmail" placeholder="correo@ejemplo.com"/>
+                </div>
+                <div class="form-group">
+                  <label>Teléfono</label>
+                  <input type="text" class="form-input" id="fTelefono" placeholder="987 000 000"/>
+                </div>
+              </div>
+              <div style="display:flex;justify-content:flex-end;margin-top:4px">
+                <button class="btn btn--primary" onclick="guardarPerfil()">
+                  <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+                  Guardar cambios
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Cambiar contraseña -->
+          <div class="card section-card">
+            <div class="card-header">
+              <h3>Cambiar contraseña</h3>
+            </div>
+            <div class="card-body">
+              <div class="form-group">
+                <label>Contraseña actual *</label>
+                <input type="password" class="form-input" id="fCurPwd" placeholder="Tu contraseña actual"/>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Nueva contraseña *</label>
+                  <input type="password" class="form-input" id="fNewPwd" placeholder="Mínimo 8 caracteres" oninput="evaluarFuerza(this.value)"/>
+                  <div class="pwd-strength"><div class="pwd-strength-bar" id="pwdBar" style="width:0%"></div></div>
+                </div>
+                <div class="form-group">
+                  <label>Confirmar nueva contraseña *</label>
+                  <input type="password" class="form-input" id="fConfPwd" placeholder="Repite la contraseña"/>
+                </div>
+              </div>
+              <div style="display:flex;justify-content:flex-end;margin-top:4px">
+                <button class="btn btn--primary" onclick="cambiarPassword()">
+                  <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"/></svg>
+                  Actualizar contraseña
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Panel lateral: info de cuenta -->
+        <div>
+          <div class="card section-card">
+            <div class="card-header"><h3>Información de cuenta</h3></div>
+            <div class="card-body">
+              <div class="info-rows">
+                <div class="info-row">
+                  <span class="info-row-label">Usuario</span>
+                  <span class="info-row-value" id="iUsername" style="font-family:monospace;font-size:13px">—</span>
+                </div>
+                <div class="info-row">
+                  <span class="info-row-label">Rol</span>
+                  <span class="info-row-value" id="iRol">—</span>
+                </div>
+                <div class="info-row">
+                  <span class="info-row-label">Estado</span>
+                  <span class="info-row-value" id="iEstado">—</span>
+                </div>
+                <div class="info-row">
+                  <span class="info-row-label">Registrado</span>
+                  <span class="info-row-value" id="iCreado">—</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card section-card">
+            <div class="card-header"><h3>Accesos rápidos</h3></div>
+            <div class="card-body" style="display:flex;flex-direction:column;gap:8px">
+              <a href="dashboard.html" class="btn btn--outline" style="justify-content:flex-start;gap:8px">
+                <svg viewBox="0 0 20 20" fill="currentColor" style="width:16px;height:16px"><path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h4a1 1 0 001-1v-3h2v3a1 1 0 001 1h4a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"/></svg>
+                Dashboard
+              </a>
+              <a href="configuracion.html" class="btn btn--outline" style="justify-content:flex-start;gap:8px">
+                <svg viewBox="0 0 20 20" fill="currentColor" style="width:16px;height:16px"><path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd"/></svg>
+                Configuración
+              </a>
+              <button class="btn btn--outline" onclick="Auth.logout()" style="justify-content:flex-start;gap:8px">
+                <svg viewBox="0 0 20 20" fill="currentColor" style="width:16px;height:16px"><path fill-rule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 102 0V4a1 1 0 00-1-1zm10.293 9.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L14.586 9H7a1 1 0 100 2h7.586l-1.293 1.293z" clip-rule="evenodd"/></svg>
+                Cerrar sesión
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<div id="toast-container"></div>
+<script src="js/storage.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/data.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/app.js"></script>
+<script>
+const AVATAR_COLORS_P = ['#6366f1','#10b981','#f59e0b','#3b82f6','#ec4899','#8b5cf6','#14b8a6','#f97316'];
+
+function cargarPerfil() {
+  const u = Auth.get();
+  if (!u) return;
+
+  // Hero (la foto/avatar la maneja el módulo de subida más abajo)
+  window.renderAvatar?.(u.avatar || '', u.nombre, u.id);
+  document.getElementById('heroNombre').textContent  = u.nombre;
+  document.getElementById('heroRolBadge').innerHTML  = badge(u.rol);
+  document.getElementById('heroUsername').textContent = '@' + u.username;
+
+  // Formulario
+  document.getElementById('fNombre').value   = u.nombre   || '';
+  document.getElementById('fCargo').value    = u.cargo    || '';
+  document.getElementById('fEmail').value    = u.email    || '';
+  document.getElementById('fTelefono').value = u.telefono || '';
+
+  // Sidebar info (from full user record)
+  const full = Data.usuarios.find(u.id) || u;
+  document.getElementById('iUsername').textContent = u.username;
+  document.getElementById('iRol').innerHTML  = badge(u.rol);
+  document.getElementById('iEstado').innerHTML = badge(full.estado || 'Activo');
+  document.getElementById('iCreado').textContent = full.createdAt ? Fmt.date(full.createdAt) : '—';
+}
+
+function guardarPerfil() {
+  const u = Auth.get();
+  if (!u) return;
+
+  const nombre   = document.getElementById('fNombre').value.trim();
+  const cargo    = document.getElementById('fCargo').value.trim();
+  const email    = document.getElementById('fEmail').value.trim();
+  const telefono = document.getElementById('fTelefono').value.trim();
+
+  if (!nombre) { Toast.error('El nombre es obligatorio'); return; }
+  if (!email)  { Toast.error('El email es obligatorio'); return; }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { Toast.error('Email inválido'); return; }
+
+  // Verificar email duplicado (excluyendo el propio usuario)
+  const dup = Data.usuarios.getAll().find(x => x.email === email && x.id !== u.id);
+  if (dup) { Toast.error('Ese email ya está en uso por otro usuario'); return; }
+
+  Data.usuarios.update(u.id, { nombre, cargo, email, telefono });
+  Auth.refresh(); // Actualiza la sesión con los nuevos datos
+  Toast.success('Perfil actualizado ✓');
+  cargarPerfil();
+}
+
+function cambiarPassword() {
+  const u = Auth.get();
+  if (!u) return;
+
+  const curPwd  = document.getElementById('fCurPwd').value;
+  const newPwd  = document.getElementById('fNewPwd').value;
+  const confPwd = document.getElementById('fConfPwd').value;
+
+  if (!curPwd) { Toast.error('Ingresa tu contraseña actual'); return; }
+  if (!newPwd) { Toast.error('Ingresa la nueva contraseña'); return; }
+
+  // Verificar contraseña actual
+  const full = Data.usuarios.find(u.id);
+  if (!full || full.passwordHash !== btoa(curPwd)) {
+    Toast.error('La contraseña actual es incorrecta');
+    return;
+  }
+  if (newPwd.length < 8) { Toast.error('La nueva contraseña debe tener al menos 8 caracteres'); return; }
+  if (newPwd !== confPwd) { Toast.error('Las contraseñas no coinciden'); return; }
+  if (curPwd === newPwd) { Toast.warning('La nueva contraseña debe ser diferente a la actual'); return; }
+
+  Data.usuarios.update(u.id, { passwordHash: btoa(newPwd) });
+  document.getElementById('fCurPwd').value  = '';
+  document.getElementById('fNewPwd').value  = '';
+  document.getElementById('fConfPwd').value = '';
+  document.getElementById('pwdBar').style.width = '0%';
+  Toast.success('Contraseña actualizada ✓');
+}
+
+function evaluarFuerza(pwd) {
+  let score = 0;
+  if (pwd.length >= 8)  score++;
+  if (pwd.length >= 12) score++;
+  if (/[A-Z]/.test(pwd)) score++;
+  if (/[0-9]/.test(pwd)) score++;
+  if (/[^A-Za-z0-9]/.test(pwd)) score++;
+
+  const bar   = document.getElementById('pwdBar');
+  const pct   = Math.min(100, score * 20);
+  const color = score <= 1 ? '#ef4444' : score <= 2 ? '#f59e0b' : score <= 3 ? '#6366f1' : '#10b981';
+  bar.style.width      = pct + '%';
+  bar.style.background = color;
+}
+
+cargarPerfil();
+</script>
+
+<script type="module">
+  import { auth, storage } from './js/firebase.js';
+  import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+  import { ref, uploadBytesResumable, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js';
+
+  const MAX_MB = 5;
+  const R = 15.5;
+  const CIRC = 2 * Math.PI * R;
+
+  const els = {
+    file:      document.getElementById('avatarFile'),
+    editBtn:   document.getElementById('avatarEditBtn'),
+    overlay:   document.getElementById('avatarOverlay'),
+    ring:      document.getElementById('avatarRingProgress'),
+    pct:       document.getElementById('avatarPct'),
+    removeBtn: document.getElementById('avatarRemoveBtn'),
+    heroAvatar:document.getElementById('heroAvatar'),
+  };
+  els.ring.style.strokeDasharray = String(CIRC);
+  els.ring.style.strokeDashoffset = String(CIRC);
+
+  let uploading = false;
+
+  const setProgress = (pct) => {
+    els.ring.style.strokeDashoffset = String(CIRC * (1 - Math.min(100, Math.max(0, pct)) / 100));
+    els.pct.textContent = Math.round(pct) + '%';
+  };
+
+  const showOverlay = (show) => {
+    els.overlay.hidden = !show;
+    els.editBtn.classList.toggle('is-disabled', show);
+    if (show) setProgress(0);
+  };
+
+  /* Única fuente de verdad para pintar el avatar (hero) — cargarPerfil()
+     la invoca en la carga inicial vía window.renderAvatar. */
+  const renderAvatar = (url, nombre, id) => {
+    if (url) {
+      els.heroAvatar.style.background = 'transparent';
+      els.heroAvatar.innerHTML = `<img src="${url}" alt="${escHtml(nombre||'')}" style="width:100%;height:100%;object-fit:cover"/>`;
+    } else {
+      const ini = String(nombre||'U').split(' ').map(p=>p[0]).join('').slice(0,2).toUpperCase();
+      els.heroAvatar.innerHTML = '';
+      els.heroAvatar.textContent = ini;
+      els.heroAvatar.style.background = AVATAR_COLORS_P[(id||0) % AVATAR_COLORS_P.length];
+    }
+    els.removeBtn.hidden = !url;
+  };
+  window.renderAvatar = renderAvatar;
+
+  /* Refleja el cambio también en sidebar y topbar sin recargar la página */
+  const refreshShellAvatars = () => {
+    const sidebar = document.getElementById('sidebar');
+    if (sidebar) sidebar.innerHTML = buildSidebarHTML();
+    const topbar = document.querySelector('.topbar');
+    if (topbar) topbar.innerHTML = buildTopbarHTML();
+    initSidebarToggle(); initMobileNav(); initThemeToggle();
+  };
+
+  /* Firebase Auth puede tardar en restaurar la sesión persistida desde
+     IndexedDB; esperamos el primer evento antes de decidir qué uid usar
+     en la ruta de Storage (ver fix equivalente en js/data.js). */
+  const authReady = new Promise(resolve => {
+    const unsub = onAuthStateChanged(auth, user => { unsub(); resolve(user); });
+  });
+
+  const leerComoDataURL = (file) => new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload  = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+
+  els.file.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file || uploading) return;
+    const u = Auth.get();
+    if (!u) return;
+
+    if (!file.type.startsWith('image/')) { Toast.error('Solo se permiten imágenes'); e.target.value = ''; return; }
+    if (file.size > MAX_MB * 1024 * 1024) { Toast.error(`La imagen no debe superar ${MAX_MB}MB`); e.target.value = ''; return; }
+
+    const previousAvatar = u.avatar || '';
+    const previewUrl = URL.createObjectURL(file);
+    renderAvatar(previewUrl, u.nombre, u.id); // vista previa instantánea, sin esperar la red
+
+    uploading = true;
+    showOverlay(true);
+
+    try {
+      const fbUser = await authReady;
+      const uid  = fbUser?.uid || `local_${u.id}`;
+      const path = `avatars/${uid}/${Date.now()}_${file.name}`;
+      const sref = ref(storage, path);
+      const task = uploadBytesResumable(sref, file);
+
+      const url = await new Promise((resolve, reject) => {
+        task.on('state_changed',
+          snap => setProgress((snap.bytesTransferred / snap.totalBytes) * 100),
+          reject,
+          () => getDownloadURL(sref).then(resolve, reject)
+        );
+      });
+
+      Data.usuarios.update(u.id, { avatar: url });
+      Auth.refresh();
+      renderAvatar(url, u.nombre, u.id);
+      refreshShellAvatars();
+      Toast.success('Foto de perfil actualizada ✓');
+    } catch (err) {
+      console.warn('No se pudo subir la foto a Firebase Storage, se guarda solo localmente', err);
+      try {
+        const dataUrl = await leerComoDataURL(file);
+        Data.usuarios.update(u.id, { avatar: dataUrl });
+        Auth.refresh();
+        renderAvatar(dataUrl, u.nombre, u.id);
+        refreshShellAvatars();
+        Toast.warning('No se pudo conectar con el servidor; la foto se guardó solo en este dispositivo');
+      } catch {
+        renderAvatar(previousAvatar, u.nombre, u.id);
+        Toast.error('No se pudo procesar la imagen. Intenta con otro archivo.');
+      }
+    } finally {
+      uploading = false;
+      showOverlay(false);
+      e.target.value = '';
+      URL.revokeObjectURL(previewUrl);
+    }
+  });
+
+  els.removeBtn.addEventListener('click', async () => {
+    const u = Auth.get();
+    if (!u || uploading) return;
+    const ok = await Confirm({ title: 'Quitar foto de perfil', message: 'Tu avatar volverá a mostrar tus iniciales.', okText: 'Quitar', type: 'warning' });
+    if (!ok) return;
+    Data.usuarios.update(u.id, { avatar: '' });
+    Auth.refresh();
+    renderAvatar('', u.nombre, u.id);
+    refreshShellAvatars();
+    Toast.success('Foto de perfil eliminada');
+  });
+
+  /* Pintado inicial (cargarPerfil ya corrió antes de que este módulo
+     terminara de cargar, por eso lo hacemos también aquí). */
+  const u0 = Auth.get();
+  if (u0) renderAvatar(u0.avatar || '', u0.nombre, u0.id);
+</script>
+</body>
+</html>

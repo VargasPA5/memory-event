@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Memory – Clientes</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="css/styles.css"/>
+  <script src="js/theme.js"></script>
+  <script src="js/logo.js"></script>
+</head>
+<body>
+<div class="layout">
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+  <main class="main" id="main">
+    <div class="page-wrapper">
+
+      <div class="page-header">
+        <div>
+          <h1>Clientes <span class="storage-indicator"><span class="storage-dot" id="storageDot"></span><span id="storageStatus">Guardado</span></span></h1>
+          <p>Administra la información de tus clientes.</p>
+        </div>
+        <div class="page-actions">
+          <button class="btn btn--outline" onclick="exportarCSV()">
+            <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+            Exportar CSV
+          </button>
+          <button class="btn btn--primary" onclick="abrirModal()">
+            <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/></svg>
+            Nuevo Cliente
+          </button>
+        </div>
+      </div>
+
+      <!-- KPIs -->
+      <div class="kpi-grid" style="grid-template-columns:repeat(3,1fr)">
+        <div class="kpi-card">
+          <div class="kpi-top"><div class="kpi-icon kpi-icon--blue"><svg viewBox="0 0 20 20" fill="currentColor"><path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v1h8v-1z"/></svg></div></div>
+          <div class="kpi-bottom"><div class="kpi-value" id="kpiTotal">0</div><div class="kpi-label">Total Clientes</div></div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-top"><div class="kpi-icon kpi-icon--green"><svg viewBox="0 0 20 20" fill="currentColor"><path d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"/></svg></div></div>
+          <div class="kpi-bottom"><div class="kpi-value" id="kpiPersonas">0</div><div class="kpi-label">Personas</div></div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-top"><div class="kpi-icon kpi-icon--orange"><svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a1 1 0 110 2h-3a1 1 0 01-1-1v-2a1 1 0 00-1-1H9a1 1 0 00-1 1v2a1 1 0 01-1 1H4a1 1 0 110-2V4z" clip-rule="evenodd"/></svg></div></div>
+          <div class="kpi-bottom"><div class="kpi-value" id="kpiEmpresas">0</div><div class="kpi-label">Empresas</div></div>
+        </div>
+      </div>
+
+      <!-- Toolbar -->
+      <div class="toolbar">
+        <div class="search-box">
+          <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd"/></svg>
+          <input type="text" id="searchInput" placeholder="Buscar por nombre o email…" oninput="renderTabla()"/>
+        </div>
+        <select class="filter-select" id="filtroTipo" onchange="renderTabla()">
+          <option value="">Todos los tipos</option>
+          <option>Persona</option>
+          <option>Empresa</option>
+        </select>
+      </div>
+
+      <!-- Tabla -->
+      <div class="tbl-wrap">
+        <table class="tbl">
+          <thead>
+            <tr>
+              <th>Cliente</th>
+              <th>Email</th>
+              <th>Teléfono</th>
+              <th>Tipo</th>
+              <th>Dirección</th>
+              <th>Registrado</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="tablaBody"></tbody>
+        </table>
+        <div class="tbl-pagination">
+          <span id="paginacionInfo">—</span>
+          <div class="pag-btns"><button class="pag-btn active">1</button></div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modalTitulo">Nuevo Cliente</h3>
+      <button class="modal-close" onclick="cerrarModal()">✕</button>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Nombre *</label><input type="text" class="form-input" id="fNombre" placeholder="Nombre completo"/></div>
+      <div class="form-group"><label>Tipo</label><select class="form-select" id="fTipo"><option>Persona</option><option>Empresa</option></select></div>
+    </div>
+    <div class="form-group"><label>Email *</label><input type="email" class="form-input" id="fEmail" placeholder="correo@ejemplo.com"/></div>
+    <div class="form-row">
+      <div class="form-group"><label>Teléfono</label><input type="text" class="form-input" id="fTelefono" placeholder="987 000 000"/></div>
+      <div class="form-group"><label>Fecha de Nacimiento</label><input type="date" class="form-input" id="fFecha"/></div>
+    </div>
+    <div class="form-group"><label>Dirección</label><input type="text" class="form-input" id="fDireccion" placeholder="Dirección completa"/></div>
+    <div class="modal-footer">
+      <button class="btn btn--outline" onclick="cerrarModal()">Cancelar</button>
+      <button class="btn btn--primary" onclick="guardarCliente()">Guardar Cliente</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+
+<script src="js/storage.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/data.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/app.js"></script>
+<script>
+let editandoId = null;
+
+/* ── Render ─────────────────────────────────────────────────────────── */
+function renderTabla() {
+  const txt   = (document.getElementById('searchInput').value || '').toLowerCase();
+  const tipo  = document.getElementById('filtroTipo').value;
+  const tbody = document.getElementById('tablaBody');
+
+  const todos = Data.clientes.getAll();
+  const filtrados = todos.filter(c =>
+    (c.nombre.toLowerCase().includes(txt) || c.email.toLowerCase().includes(txt)) &&
+    (!tipo || c.tipo === tipo)
+  );
+
+  document.getElementById('kpiTotal').textContent    = todos.length;
+  document.getElementById('kpiPersonas').textContent = todos.filter(c=>c.tipo==='Persona').length;
+  document.getElementById('kpiEmpresas').textContent = todos.filter(c=>c.tipo==='Empresa').length;
+  document.getElementById('paginacionInfo').textContent = `Mostrando ${filtrados.length} de ${todos.length} clientes`;
+
+  tbody.innerHTML = '';
+  if (!filtrados.length) { tbody.innerHTML = emptyState('No se encontraron clientes.'); return; }
+
+  filtrados.forEach(c => {
+    const tr = document.createElement('tr');
+    const fechaReg = c.createdAt ? Fmt.date(c.createdAt) : '—';
+    tr.innerHTML = `
+      <td><div class="client-cell">${avatarEl(c.nombre, c.id)}<span class="fw-600"></span></div></td>
+      <td class="c-email"></td>
+      <td class="c-tel"></td>
+      <td>${badge(c.tipo)}</td>
+      <td class="c-dir"></td>
+      <td>${fechaReg}</td>
+      <td>
+        <div class="actions">
+          <button class="action-btn" title="Editar" onclick="editarCliente(${c.id})">
+            <svg viewBox="0 0 20 20" fill="currentColor"><path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/></svg>
+          </button>
+          <button class="action-btn delete" title="Eliminar" onclick="pedirEliminar(${c.id})">
+            <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+          </button>
+        </div>
+      </td>`;
+    tr.querySelector('.fw-600').textContent = c.nombre;
+    tr.querySelector('.c-email').textContent = c.email;
+    tr.querySelector('.c-tel').textContent = c.telefono || '—';
+    tr.querySelector('.c-dir').textContent = c.direccion || '—';
+    tbody.appendChild(tr);
+  });
+}
+
+/* ── Modal ──────────────────────────────────────────────────────────── */
+function abrirModal() {
+  editandoId = null;
+  document.getElementById('modalTitulo').textContent = 'Nuevo Cliente';
+  limpiarForm();
+  document.getElementById('modalOverlay').classList.add('modal-overlay--open');
+  setTimeout(() => document.getElementById('fNombre').focus(), 50);
+}
+function cerrarModal() {
+  document.getElementById('modalOverlay').classList.remove('modal-overlay--open');
+  limpiarForm();
+}
+document.getElementById('modalOverlay').addEventListener('click', e => { if (e.target.id === 'modalOverlay') cerrarModal(); });
+
+function limpiarForm() {
+  ['fNombre','fEmail','fTelefono','fFecha','fDireccion'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('fTipo').value = 'Persona';
+}
+
+async function guardarCliente() {
+  const nombre    = document.getElementById('fNombre').value.trim();
+  const email     = document.getElementById('fEmail').value.trim();
+  const tipo      = document.getElementById('fTipo').value;
+  const telefono  = document.getElementById('fTelefono').value.trim();
+  const fecha     = document.getElementById('fFecha').value;
+  const direccion = document.getElementById('fDireccion').value.trim();
+
+  if (!nombre) { Toast.error('El nombre es obligatorio'); return; }
+  if (!email)  { Toast.error('El email es obligatorio'); return; }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { Toast.error('Email inválido'); return; }
+
+  const dupEmail = Data.clientes.getAll().find(c => c.email === email && c.id !== editandoId);
+  if (dupEmail) { Toast.error('Ya existe un cliente con ese email'); return; }
+
+  indicarGuardando(true);
+  if (editandoId !== null) {
+    Data.clientes.update(editandoId, { nombre, email, tipo, telefono, fechaNacimiento: fecha, direccion });
+    Toast.success('Cliente actualizado ✓');
+  } else {
+    Data.clientes.create({ nombre, email, tipo, telefono, fechaNacimiento: fecha, direccion });
+    Toast.success('Cliente guardado ✓');
+  }
+  indicarGuardando(false);
+  cerrarModal();
+  renderTabla();
+}
+
+function editarCliente(id) {
+  const c = Data.clientes.find(id);
+  if (!c) return;
+  editandoId = id;
+  document.getElementById('modalTitulo').textContent = 'Editar Cliente';
+  document.getElementById('fNombre').value    = c.nombre;
+  document.getElementById('fEmail').value     = c.email;
+  document.getElementById('fTipo').value      = c.tipo;
+  document.getElementById('fTelefono').value  = c.telefono || '';
+  document.getElementById('fFecha').value     = c.fechaNacimiento || '';
+  document.getElementById('fDireccion').value = c.direccion || '';
+  document.getElementById('modalOverlay').classList.add('modal-overlay--open');
+  setTimeout(() => document.getElementById('fNombre').focus(), 50);
+}
+
+async function pedirEliminar(id) {
+  const dep = Data.depCliente(id);
+  const partes = [];
+  if (dep.eventos)  partes.push(`${dep.eventos} evento${dep.eventos>1?'s':''}`);
+  if (dep.reservas) partes.push(`${dep.reservas} reserva${dep.reservas>1?'s':''}`);
+  if (dep.ingresos) partes.push(`${dep.ingresos} pago${dep.ingresos>1?'s':''}`);
+  if (partes.length) {
+    Toast.warning(`No se puede eliminar: tiene ${partes.join(', ')} asociados`);
+    return;
+  }
+  const ok = await Confirm({ title:'¿Eliminar cliente?', message:'Esta acción no se puede deshacer. El cliente será eliminado permanentemente.', okText:'Sí, eliminar' });
+  if (!ok) return;
+  Data.clientes.delete(id);
+  renderTabla();
+  Toast.success('Cliente eliminado');
+}
+
+/* ── CSV export ─────────────────────────────────────────────────────── */
+function exportarCSV() {
+  const clientes = Data.clientes.getAll();
+  const rows = [['ID','Nombre','Email','Teléfono','Tipo','Dirección','Registrado']];
+  clientes.forEach(c => rows.push([c.id,`"${c.nombre}"`,`"${c.email}"`,c.telefono||'',c.tipo,`"${c.direccion||''}"`,c.createdAt?Fmt.date(c.createdAt):'']));
+  const csv = rows.map(r=>r.join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent('﻿'+csv);
+  a.download = 'clientes.csv';
+  a.click();
+  Toast.success('CSV exportado ✓');
+}
+
+/* ── Storage indicator ──────────────────────────────────────────────── */
+function indicarGuardando(saving) {
+  const dot = document.getElementById('storageDot');
+  const lbl = document.getElementById('storageStatus');
+  if (saving) { dot.className='storage-dot saving'; lbl.textContent='Guardando…'; }
+  else        { dot.className='storage-dot'; lbl.textContent='Guardado ✓'; }
+}
+
+/* ── Init ───────────────────────────────────────────────────────────── */
+renderTabla();
+</script>
+</body>
+</html>
