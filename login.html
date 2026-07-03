@@ -1,11 +1,11 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Memory — Iniciar sesión</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Dancing+Script:wght@700&display=swap" rel="stylesheet"/>
   <script src="js/logo.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -55,13 +55,13 @@
       z-index: 1;
     }
     .left-brand-icon {
-      width: 44px; height: 44px;
-      border-radius: 12px;
-      background: linear-gradient(135deg, #c9a35a, #b3893f);
+      width: 48px; height: 48px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #d9b978, #9e7528);
       display: flex; align-items: center; justify-content: center;
-      box-shadow: 0 4px 16px rgba(201,163,90,.4), 0 0 0 1px rgba(255,255,255,.1);
+      box-shadow: 0 4px 20px rgba(201,163,90,.5), 0 0 0 2px rgba(255,255,255,.15);
     }
-    .left-brand-name { font-size: 20px; font-weight: 700; color: #eee8de; }
+    .left-brand-name { font-size: 24px; font-weight: 700; font-family: 'Dancing Script', cursive; color: #eee8de; letter-spacing: .03em; }
     .left-brand-ver { font-size: 11px; color: rgba(255,255,255,.35); margin-top: 2px; }
     .left-headline {
       font-size: 28px;
@@ -103,11 +103,12 @@
     }
     @media (max-width: 820px) { .mobile-brand { display: flex; } }
     .mobile-brand-icon {
-      width: 36px; height: 36px; border-radius: 10px;
-      background: linear-gradient(135deg, #c9a35a, #b3893f);
+      width: 38px; height: 38px; border-radius: 50%;
+      background: linear-gradient(135deg, #d9b978, #9e7528);
       display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 2px 10px rgba(201,163,90,.35);
     }
-    .mobile-brand-name { font-size: 17px; font-weight: 700; color: #1a1917; }
+    .mobile-brand-name { font-size: 20px; font-weight: 700; font-family: 'Dancing Script', cursive; color: #1a1917; letter-spacing: .02em; }
 
     /* ── Headings ──────────────────────────────────────────────────── */
     .card-title { font-size: 22px; font-weight: 700; color: #1a1917; margin-bottom: 4px; }
@@ -247,11 +248,8 @@
   <div class="login-left">
     <div class="left-brand">
       <div class="left-brand-icon">
-        <svg width="26" height="26" viewBox="0 0 40 40" fill="none">
-          <defs><linearGradient id="leftMGrad" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse">
-            <stop stop-color="#fff8ec"/><stop offset=".5" stop-color="#eee8de"/><stop offset="1" stop-color="#c9a35a"/>
-          </linearGradient></defs>
-          <text x="50%" y="60%" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="28" font-weight="700" fill="url(#leftMGrad)">M</text>
+        <svg width="30" height="30" viewBox="0 0 40 40" fill="none">
+          <path d="M8,31 C8,19 10,11 14,10 C16,9 18,15 20,23 C22,31 25,9 28,10 C31,11 33,21 33,31" stroke="white" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
         </svg>
       </div>
       <div>
@@ -272,11 +270,8 @@
 
       <div class="mobile-brand">
         <div class="mobile-brand-icon">
-          <svg width="18" height="18" viewBox="0 0 40 40" fill="none">
-            <defs><linearGradient id="mobMGrad" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse">
-              <stop stop-color="#f1f5f9"/><stop offset=".5" stop-color="#cbd5e1"/><stop offset="1" stop-color="#64748b"/>
-            </linearGradient></defs>
-            <text x="50%" y="60%" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="28" font-weight="700" fill="url(#mobMGrad)">M</text>
+          <svg width="22" height="22" viewBox="0 0 40 40" fill="none">
+            <path d="M8,31 C8,19 10,11 14,10 C16,9 18,15 20,23 C22,31 25,9 28,10 C31,11 33,21 33,31" stroke="white" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
           </svg>
         </div>
         <span class="mobile-brand-name">Memory</span>

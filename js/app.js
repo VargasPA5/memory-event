@@ -31,7 +31,7 @@ const _mkAvatar = (nombre, id, size = 32, avatarUrl = '') => {
     return `<img src="${avatarUrl}" alt="${escHtml(nombre || '')}" class="avatar-img" style="width:${size}px;height:${size}px;flex-shrink:0"/>`;
   }
   const ini = String(nombre || 'U').split(' ').map(p => p[0]).join('').slice(0, 2).toUpperCase();
-  const COLS = ['#6366f1','#10b981','#f59e0b','#3b82f6','#ec4899','#8b5cf6','#14b8a6','#f97316'];
+  const COLS = ['#c9a35a','#10b981','#f59e0b','#3b82f6','#ec4899','#8b5cf6','#14b8a6','#f97316'];
   const bg   = COLS[(id || 0) % COLS.length];
   const fs   = Math.round(size * 0.38);
   return `<div class="avatar-ini" style="background:${bg};width:${size}px;height:${size}px;font-size:${fs}px;flex-shrink:0">${ini}</div>`;
@@ -65,10 +65,14 @@ const buildSidebarHTML = () => {
   const brandLogoHTML = logo?.url
     ? `<img src="${logo.url}" alt="Logo" style="width:100%;height:100%;object-fit:contain;border-radius:8px"/>`
     : `<svg width="28" height="28" viewBox="0 0 40 40" fill="none">
-        <defs><linearGradient id="sbg" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse">
-          <stop stop-color="#f1f5f9"/><stop offset=".5" stop-color="#94a3b8"/><stop offset="1" stop-color="#475569"/>
-        </linearGradient></defs>
-        <text x="50%" y="60%" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="28" font-weight="700" fill="url(#sbg)">M</text>
+        <defs>
+          <linearGradient id="sbg" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#d9b978"/><stop offset="1" stop-color="#9e7528"/>
+          </linearGradient>
+        </defs>
+        <circle cx="20" cy="20" r="19.5" fill="url(#sbg)"/>
+        <circle cx="20" cy="20" r="18.5" fill="none" stroke="rgba(255,255,255,.2)" stroke-width="1"/>
+        <path d="M8,31 C8,19 10,11 14,10 C16,9 18,15 20,23 C22,31 25,9 28,10 C31,11 33,21 33,31" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
       </svg>`;
 
   return `

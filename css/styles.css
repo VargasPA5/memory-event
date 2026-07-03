@@ -154,10 +154,12 @@ img { display: block; max-width: 100%; }
 .brand-text { overflow: hidden; }
 .brand-name {
   display: block;
-  font-size: 14.5px;
+  font-size: 17px;
   font-weight: 700;
+  font-family: 'Dancing Script', cursive;
   color: #fff;
   white-space: nowrap;
+  letter-spacing: .02em;
 }
 .brand-ver {
   display: block;
