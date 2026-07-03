@@ -128,16 +128,16 @@
 <script src="js/ui.js"></script>
 <script src="js/app.js"></script>
 <script>
-const CHART_COLORS = ['#6366f1','#10b981','#f59e0b','#3b82f6','#ec4899','#8b5cf6','#14b8a6','#f97316'];
+const CHART_COLORS = ['#c9a35a','#10b981','#f59e0b','#3b82f6','#ec4899','#8b5cf6','#14b8a6','#f97316'];
 /* ── Colores de gráficos según tema (ver js/theme.js) ──────────────────── */
 const chartTheme = () => {
   const dark = Theme.get() === 'dark';
   return {
-    grid:   dark ? '#242936' : '#f1f5f9',
-    tick:   dark ? '#8b93a7' : '#94a3b8',
-    legend: dark ? '#cbd5e1' : '#475569',
-    ringBg: dark ? '#171a23' : '#fff',
-    tooltip: { backgroundColor: dark ? '#0d0f14' : '#1e293b', titleColor: '#f1f5f9', bodyColor: dark ? '#a3a9b8' : '#94a3b8', padding: 10 },
+    grid:   dark ? '#252219' : '#ede9e2',
+    tick:   dark ? '#6a6560' : '#9a9890',
+    legend: dark ? '#eee8de' : '#3a3730',
+    ringBg: dark ? '#1c1b18' : '#fff',
+    tooltip: { backgroundColor: dark ? '#100f0d' : '#1a1814', titleColor: '#eee8de', bodyColor: dark ? '#8a8478' : '#9a9890', padding: 10 },
   };
 };
 let charts = {};
@@ -181,7 +181,7 @@ function renderChartIngresos() {
     data: {
       labels: porMes.map(m => m.label),
       datasets: [
-        { label:'Ingresos', data: porMes.map(m => m.total), backgroundColor: 'rgba(109,94,248,.18)', borderColor:'#6d5ef8', borderWidth:2, borderRadius:6, hoverBackgroundColor:'rgba(109,94,248,.28)' }
+        { label:'Ingresos', data: porMes.map(m => m.total), backgroundColor: 'rgba(201,163,90,.18)', borderColor:'#c9a35a', borderWidth:2, borderRadius:6, hoverBackgroundColor:'rgba(201,163,90,.28)' }
       ]
     },
     options: {
@@ -222,7 +222,7 @@ function renderChartReservas() {
     type: 'doughnut',
     data: {
       labels: ['Confirmadas','Pendientes','Canceladas'],
-      datasets:[{ data:[re.confirmadas, re.pendientes, re.canceladas], backgroundColor:['#6d5ef8','#f59e0b','#ef4444'], borderColor:ct.ringBg, borderWidth:3, hoverOffset:5 }]
+      datasets:[{ data:[re.confirmadas, re.pendientes, re.canceladas], backgroundColor:['#c9a35a','#f59e0b','#ef4444'], borderColor:ct.ringBg, borderWidth:3, hoverOffset:5 }]
     },
     options: {
       responsive:true, maintainAspectRatio:false, cutout:'60%',

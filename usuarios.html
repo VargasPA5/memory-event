@@ -144,7 +144,7 @@ function renderTabla() {
     const rolVariant = u.rol==='Administrador' ? 'purple' : 'indigo';
     const estVariant = u.estado==='Activo' ? 'green' : 'red';
     const ini = String(u.nombre||'U').split(' ').map(p=>p[0]).join('').slice(0,2).toUpperCase();
-    const COLS = ['#6366f1','#10b981','#f59e0b','#3b82f6','#ec4899','#8b5cf6'];
+    const COLS = ['#c9a35a','#10b981','#f59e0b','#3b82f6','#ec4899','#8b5cf6'];
     const bg   = COLS[(u.id||0) % COLS.length];
     tr.innerHTML = `
       <td>

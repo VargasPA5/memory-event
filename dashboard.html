@@ -187,10 +187,10 @@
   const chartTheme = () => {
     const dark = Theme.get() === 'dark';
     return {
-      grid:   dark ? '#242936' : '#f1f5f9',
-      tick:   dark ? '#8b93a7' : '#94a3b8',
-      ringBg: dark ? '#171a23' : '#fff',
-      tooltip: { backgroundColor: dark ? '#0d0f14' : '#1e293b', titleColor: '#f1f5f9', bodyColor: dark ? '#a3a9b8' : '#94a3b8', padding: 10 },
+      grid:   dark ? '#252219' : '#ede9e2',
+      tick:   dark ? '#6a6560' : '#9a9890',
+      ringBg: dark ? '#1c1b18' : '#fff',
+      tooltip: { backgroundColor: dark ? '#100f0d' : '#1a1814', titleColor: '#eee8de', bodyColor: dark ? '#8a8478' : '#9a9890', padding: 10 },
     };
   };
 
@@ -208,13 +208,13 @@
         labels: s.ingresos.porMes.map(m => m.label),
         datasets: [{
           data: s.ingresos.porMes.map(m => m.total),
-          borderColor: '#6d5ef8',
-          backgroundColor: 'rgba(109,94,248,.1)',
+          borderColor: '#c9a35a',
+          backgroundColor: 'rgba(201,163,90,.1)',
           borderWidth: 2.5,
           fill: true,
           tension: 0.4,
           pointRadius: 4,
-          pointBackgroundColor: '#6d5ef8',
+          pointBackgroundColor: '#c9a35a',
           pointBorderColor: ct.ringBg,
           pointBorderWidth: 2,
           pointHoverRadius: 6,
@@ -238,7 +238,7 @@
   /* Gráfico donut — reservas */
   const donutCtx = document.getElementById('donutChart');
   const re = s.reservas;
-  const colors = ['#6d5ef8','#f59e0b','#ef4444'];
+  const colors = ['#c9a35a','#f59e0b','#ef4444'];
   const renderDonutChart = () => {
     if (!donutCtx || re.total <= 0) return;
     const ct = chartTheme();
@@ -283,7 +283,7 @@
       const item = document.createElement('div');
       item.className = 'event-item';
       item.innerHTML = `
-        <div class="avatar-ini" style="background:#6d5ef8;width:36px;height:36px;font-size:13px;border-radius:8px">${escHtml(ev.tipo.slice(0,2))}</div>
+        <div class="avatar-ini" style="background:#c9a35a;color:#1a1917;width:36px;height:36px;font-size:13px;border-radius:8px">${escHtml(ev.tipo.slice(0,2))}</div>
         <div class="event-item-info">
           <div class="event-item-name"></div>
           <div class="event-item-date">📅 ${d.getDate()} ${MESES[d.getMonth()]} · ${ev.hora||''}</div>

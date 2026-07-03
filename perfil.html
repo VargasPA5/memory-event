@@ -249,7 +249,7 @@
 <script src="js/ui.js"></script>
 <script src="js/app.js"></script>
 <script>
-const AVATAR_COLORS_P = ['#6366f1','#10b981','#f59e0b','#3b82f6','#ec4899','#8b5cf6','#14b8a6','#f97316'];
+const AVATAR_COLORS_P = ['#c9a35a','#10b981','#f59e0b','#3b82f6','#ec4899','#8b5cf6','#14b8a6','#f97316'];
 
 function cargarPerfil() {
   const u = Auth.get();
@@ -337,7 +337,7 @@ function evaluarFuerza(pwd) {
 
   const bar   = document.getElementById('pwdBar');
   const pct   = Math.min(100, score * 20);
-  const color = score <= 1 ? '#ef4444' : score <= 2 ? '#f59e0b' : score <= 3 ? '#6366f1' : '#10b981';
+  const color = score <= 1 ? '#ef4444' : score <= 2 ? '#f59e0b' : score <= 3 ? '#c9a35a' : '#10b981';
   bar.style.width      = pct + '%';
   bar.style.background = color;
 }

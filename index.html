@@ -23,9 +23,9 @@
   .pf-brand-name { font-size:18px; font-weight:800; }
   .pf-login-btn {
     display:flex; align-items:center; gap:8px;
-    background:linear-gradient(135deg,#6d5ef8,#5b4ce0); color:#fff;
+    background:linear-gradient(135deg,#c9a35a,#b3893f); color:#1a1917;
     padding:10px 20px; border-radius:9999px; font-weight:600; font-size:14px;
-    text-decoration:none; box-shadow:0 4px 14px rgba(109,94,248,.35);
+    text-decoration:none; box-shadow:0 4px 14px rgba(201,163,90,.35);
     transition:opacity .15s, transform .1s;
   }
   .pf-login-btn:hover { opacity:.92; }
@@ -34,17 +34,17 @@
 
   /* ── Hero ────────────────────────────────────────────────────────── */
   .pf-hero {
-    background:linear-gradient(160deg,#0a0a0b 0%,#14122a 60%,#0b0c14 100%);
+    background:linear-gradient(160deg,#100f0d 0%,#1a1814 60%,#0d0c0a 100%);
     color:#fff; padding:90px 32px 110px; text-align:center; position:relative; overflow:hidden;
   }
-  .pf-hero::before { content:'';position:absolute;top:-140px;left:-140px;width:420px;height:420px;border-radius:50%;background:radial-gradient(circle,rgba(109,94,248,.25) 0%,transparent 70%); }
-  .pf-hero::after  { content:'';position:absolute;bottom:-120px;right:-120px;width:380px;height:380px;border-radius:50%;background:radial-gradient(circle,rgba(91,76,224,.2) 0%,transparent 70%); }
+  .pf-hero::before { content:'';position:absolute;top:-140px;left:-140px;width:420px;height:420px;border-radius:50%;background:radial-gradient(circle,rgba(201,163,90,.2) 0%,transparent 70%); }
+  .pf-hero::after  { content:'';position:absolute;bottom:-120px;right:-120px;width:380px;height:380px;border-radius:50%;background:radial-gradient(circle,rgba(179,137,63,.15) 0%,transparent 70%); }
   .pf-hero-inner { position:relative; z-index:1; max-width:760px; margin:0 auto; }
   .pf-hero h1 { font-size:42px; font-weight:800; line-height:1.25; margin:0 0 16px; }
   .pf-hero p { font-size:16px; color:#cbd5e1; line-height:1.7; margin:0 auto 32px; max-width:560px; }
   .pf-hero-stats { display:flex; justify-content:center; gap:40px; flex-wrap:wrap; margin-top:36px; }
-  .pf-stat-num { font-size:26px; font-weight:800; color:#b4a9ff; }
-  .pf-stat-label { font-size:12.5px; color:#94a3b8; margin-top:2px; }
+  .pf-stat-num { font-size:26px; font-weight:800; color:#d4b77a; }
+  .pf-stat-label { font-size:12.5px; color:rgba(255,255,255,.55); margin-top:2px; }
 
   /* ── Secciones genéricas ─────────────────────────────────────────── */
   .pf-section { max-width:1080px; margin:0 auto; padding:72px 32px; }
@@ -117,7 +117,7 @@
     <span class="pf-brand-icon" style="display:inline-flex;width:26px;height:26px">
       <svg width="26" height="26" viewBox="0 0 40 40" fill="none">
         <defs><linearGradient id="navMGrad" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse">
-          <stop stop-color="#cbd5e1"/><stop offset=".5" stop-color="#64748b"/><stop offset="1" stop-color="#334155"/>
+          <stop stop-color="#f0d9a8"/><stop offset=".5" stop-color="#c9a35a"/><stop offset="1" stop-color="#b3893f"/>
         </linearGradient></defs>
         <text x="50%" y="60%" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="28" font-weight="700" fill="url(#navMGrad)">M</text>
       </svg>
@@ -135,7 +135,7 @@
   <div class="pf-hero-inner">
     <h1>Tu evento, tu historia,<br/>tu recuerdo</h1>
     <p>Memory es una empresa especializada en planificación y gestión integral de eventos sociales y corporativos. Acompañamos a nuestros clientes desde la primera idea hasta el último brindis, cuidando cada detalle para que cada celebración se convierta en un recuerdo inolvidable.</p>
-    <a href="#contacto" class="pf-login-btn" style="background:transparent;border:1.5px solid rgba(255,255,255,.25);box-shadow:none">Contáctanos</a>
+    <a href="#contacto" class="pf-login-btn" style="background:rgba(255,255,255,.12);border:1.5px solid rgba(255,255,255,.3);backdrop-filter:blur(8px);box-shadow:none">Contáctanos</a>
     <div class="pf-hero-stats">
       <div><div class="pf-stat-num" id="stNum1">+150</div><div class="pf-stat-label">Eventos realizados</div></div>
       <div><div class="pf-stat-num" id="stNum2">+98%</div><div class="pf-stat-label">Clientes satisfechos</div></div>
@@ -224,7 +224,7 @@
       <div class="pf-stars">★★★★★</div>
       <p class="pf-review-text">"El equipo de Memory se encargó de todo: decoración, catering y música. Nuestra boda fue exactamente como la soñamos, sin ningún imprevisto."</p>
       <div class="pf-review-author">
-        <div class="pf-review-avatar" style="background:#6d5ef8">AT</div>
+        <div class="pf-review-avatar" style="background:#c9a35a;color:#1a1917">AT</div>
         <div><div class="pf-review-name">Ana Torres</div><div class="pf-review-meta">Boda · Nueva Cajamarca</div></div>
       </div>
     </div>
