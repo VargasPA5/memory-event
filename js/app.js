@@ -196,9 +196,10 @@ const buildNotifItems = () => {
   try {
     const en7 = now + 7 * 86400000;
     Data.eventos.getAll().forEach(e => {
-      const ts = new Date(e.fecha || 0).getTime();
-      if (!ts || ts < now || ts > en7) return;
-      const d = Math.ceil((ts - now) / 86400000);
+      const fechaTs = new Date(e.fecha || 0).getTime();
+      if (!fechaTs || fechaTs < now || fechaTs > en7) return;
+      const d = Math.ceil((fechaTs - now) / 86400000);
+      const ts = new Date(e.createdAt || e.fecha || 0).getTime();
       items.push({ ts, type: 'evento',  title: `Evento próximo — ${e.nombre}`,                sub: d < 1 ? 'Hoy' : d === 1 ? 'Mañana' : `En ${d} días` });
     });
   } catch(e) {}

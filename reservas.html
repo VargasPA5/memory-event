@@ -82,7 +82,7 @@
 
 <!-- Modal -->
 <div class="modal-overlay" id="modalOverlay">
-  <div class="modal">
+  <div class="modal modal--lg">
     <div class="modal-header">
       <h3 id="modalTitulo">Nueva Reserva</h3>
       <button class="modal-close" onclick="cerrarModal()">✕</button>
@@ -100,6 +100,17 @@
       <div class="form-group"><label>Adelanto (S/)</label><input type="number" class="form-input" id="fAdelanto" placeholder="0.00" oninput="calcularSaldo()"/></div>
     </div>
     <div class="form-group"><label>Saldo (S/) — calculado automáticamente</label><input type="number" class="form-input" id="fSaldo" placeholder="0.00" readonly style="background:#f8fafc;color:var(--txt-muted)"/></div>
+
+    <div class="form-group">
+      <label>Servicios contratados</label>
+      <div class="servicios-list" id="serviciosRows"></div>
+      <button type="button" class="btn btn--outline btn--sm" onclick="agregarServicioRow()">+ Agregar servicio</button>
+      <div class="servicios-suma">
+        <span>Suma de servicios: <strong id="serviciosSumaValor">S/ 0.00</strong></span>
+        <button type="button" class="btn btn--outline btn--sm" onclick="usarSumaComoTotal()">Usar como Total</button>
+      </div>
+    </div>
+
     <div class="form-group"><label>Notas</label><textarea class="form-input form-textarea" id="fNotas" rows="2" placeholder="Observaciones adicionales…"></textarea></div>
     <div class="modal-footer">
       <button class="btn btn--outline" onclick="cerrarModal()">Cancelar</button>
@@ -117,6 +128,104 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
 let editandoId = null;
+
+const PRESET_SERVICIOS = ['Alquiler del local','Comida / Catering','Decoración','Arreglos florales','DJ','Fotografía','Video','Animación','Seguridad','Limpieza','Otros'];
+
+/* ── Servicios contratados ────────────────────────────────────────────── */
+function agregarServicioRow(data = {}) {
+  const wrap = document.getElementById('serviciosRows');
+  const esPreset = data.nombre && PRESET_SERVICIOS.includes(data.nombre) && data.nombre !== 'Otros';
+  const esOtro = !!data.nombre && !esPreset;
+
+  const div = document.createElement('div');
+  div.className = 'servicio-row';
+  div.innerHTML = `
+    <div>
+      <select class="serv-nombre" onchange="onServicioNombreChange(this)"></select>
+      <input type="text" class="serv-nombre-custom" placeholder="Especifique el servicio" style="display:none;margin-top:4px"/>
+    </div>
+    <input type="number" class="serv-precio" placeholder="Precio" min="0" step="0.01" oninput="recalcServicioRow(this)"/>
+    <input type="number" class="serv-cantidad" placeholder="Cant." min="1" oninput="recalcServicioRow(this)"/>
+    <div class="servicio-row__subtotal">S/ 0.00</div>
+    <input type="text" class="serv-obs" placeholder="Observaciones"/>
+    <button type="button" class="servicio-row__del" title="Eliminar servicio">✕</button>`;
+
+  const sel = div.querySelector('.serv-nombre');
+  PRESET_SERVICIOS.forEach(s => { const o = document.createElement('option'); o.textContent = s; sel.appendChild(o); });
+  sel.value = esOtro ? 'Otros' : (data.nombre || PRESET_SERVICIOS[0]);
+
+  const custom = div.querySelector('.serv-nombre-custom');
+  if (esOtro) { custom.style.display = 'block'; custom.value = data.nombre; }
+
+  div.querySelector('.serv-precio').value = data.precio || '';
+  div.querySelector('.serv-cantidad').value = data.cantidad || 1;
+  div.querySelector('.serv-obs').value = data.observaciones || '';
+  div.querySelector('.servicio-row__subtotal').textContent = Fmt.currency((data.precio || 0) * (data.cantidad || 1));
+  div.querySelector('.servicio-row__del').addEventListener('click', () => { div.remove(); recalcSumaServicios(); });
+
+  wrap.appendChild(div);
+}
+
+function onServicioNombreChange(sel) {
+  const custom = sel.closest('.servicio-row').querySelector('.serv-nombre-custom');
+  custom.style.display = sel.value === 'Otros' ? 'block' : 'none';
+  if (sel.value !== 'Otros') custom.value = '';
+}
+
+function recalcServicioRow(inputEl) {
+  const row = inputEl.closest('.servicio-row');
+  const precio = parseFloat(row.querySelector('.serv-precio').value) || 0;
+  const cantidad = parseInt(row.querySelector('.serv-cantidad').value) || 1;
+  row.querySelector('.servicio-row__subtotal').textContent = Fmt.currency(precio * cantidad);
+  recalcSumaServicios();
+}
+
+function calcularSumaServicios() {
+  let suma = 0;
+  document.querySelectorAll('#serviciosRows .servicio-row').forEach(row => {
+    const precio = parseFloat(row.querySelector('.serv-precio').value) || 0;
+    const cantidad = parseInt(row.querySelector('.serv-cantidad').value) || 1;
+    suma += precio * cantidad;
+  });
+  return suma;
+}
+
+function recalcSumaServicios() {
+  document.getElementById('serviciosSumaValor').textContent = Fmt.currency(calcularSumaServicios());
+}
+
+function usarSumaComoTotal() {
+  document.getElementById('fTotal').value = calcularSumaServicios().toFixed(2);
+  calcularSaldo();
+}
+
+function renderServicios(lista) {
+  document.getElementById('serviciosRows').innerHTML = '';
+  (lista || []).forEach(s => agregarServicioRow(s));
+  recalcSumaServicios();
+}
+
+function recolectarServicios() {
+  const filas = document.querySelectorAll('#serviciosRows .servicio-row');
+  const resultado = [];
+  for (const row of filas) {
+    const sel = row.querySelector('.serv-nombre');
+    const custom = row.querySelector('.serv-nombre-custom');
+    const precioRaw = row.querySelector('.serv-precio').value.trim();
+    const observaciones = row.querySelector('.serv-obs').value.trim();
+    const nombre = (sel.value === 'Otros' ? custom.value.trim() : sel.value) || '';
+    const precio = parseFloat(precioRaw) || 0;
+    const cantidad = parseInt(row.querySelector('.serv-cantidad').value) || 1;
+
+    const tieneAlgo = precioRaw !== '' || observaciones !== '' || (sel.value === 'Otros' && custom.value.trim() !== '');
+    if (!tieneAlgo) continue; // fila agregada pero no completada: se ignora
+
+    if (sel.value === 'Otros' && !nombre) { Toast.error('Especifica el nombre del servicio "Otros"'); return null; }
+    if (precio <= 0) { Toast.error(`El servicio "${nombre}" debe tener un precio mayor a 0`); return null; }
+    resultado.push({ nombre, precio, cantidad, subtotal: precio * cantidad, observaciones });
+  }
+  return resultado;
+}
 
 function poblarSelects() {
   const selCl = document.getElementById('fCliente');
@@ -215,6 +324,7 @@ document.getElementById('modalOverlay').addEventListener('click', e => { if (e.t
 function limpiarForm() {
   ['fFecha','fTotal','fAdelanto','fSaldo','fNotas'].forEach(id => document.getElementById(id).value='');
   document.getElementById('fEstado').selectedIndex=0;
+  renderServicios([]);
 }
 
 function guardarReserva() {
@@ -234,11 +344,14 @@ function guardarReserva() {
   if (adelanto < 0){ Toast.error('El adelanto no puede ser negativo'); return; }
   if (adelanto > total) { Toast.error('El adelanto no puede superar el total'); return; }
 
+  const servicios = recolectarServicios();
+  if (servicios === null) return; // error de validación ya mostrado
+
   if (editandoId !== null) {
-    Data.reservas.update(editandoId, { clienteId, eventoId, fecha, estado, total, adelanto, saldo, notas });
+    Data.reservas.update(editandoId, { clienteId, eventoId, fecha, estado, total, adelanto, saldo, notas, servicios });
     Toast.success('Reserva actualizada ✓');
   } else {
-    Data.reservas.create({ codigo: nextCodigo(), clienteId, eventoId, fecha, estado, total, adelanto, saldo, notas });
+    Data.reservas.create({ codigo: nextCodigo(), clienteId, eventoId, fecha, estado, total, adelanto, saldo, notas, servicios });
     Toast.success('Reserva guardada ✓');
   }
   cerrarModal();
@@ -259,6 +372,7 @@ function editarReserva(id) {
   document.getElementById('fAdelanto').value = r.adelanto || '';
   document.getElementById('fSaldo').value    = r.saldo || '';
   document.getElementById('fNotas').value    = r.notas || '';
+  renderServicios(r.servicios || []);
   document.getElementById('modalOverlay').classList.add('modal-overlay--open');
 }
 

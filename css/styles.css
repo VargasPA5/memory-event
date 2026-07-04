@@ -1157,6 +1157,85 @@ img { display: block; max-width: 100%; }
   #anexosGrid { grid-template-columns: repeat(2,1fr) !important; }
 }
 
+/* ===== REPORT TABLE (reportes.html, historial de boletas) =================== */
+.report-table { width: 100%; border-collapse: collapse; }
+.report-table th { text-align: left; padding: 9px 16px; font-size: 11px; font-weight: 700; color: var(--txt-muted); text-transform: uppercase; letter-spacing: .07em; background: var(--main-bg); border-bottom: 1px solid var(--card-border); }
+.report-table td { padding: 10px 16px; font-size: 13px; border-bottom: 1px solid var(--card-border); }
+.report-table tbody tr:last-child td { border-bottom: none; }
+.report-table tbody tr:hover td { background: var(--main-bg); }
+
+/* ===== SERVICIOS CONTRATADOS (Reservas) ===================================== */
+.servicios-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px; }
+.servicio-row {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr .8fr .8fr 1fr auto;
+  gap: 8px;
+  align-items: center;
+  background: var(--main-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-sm);
+  padding: 8px;
+}
+.servicio-row input, .servicio-row select {
+  width: 100%;
+  padding: 7px 8px;
+  font-size: 12.5px;
+  border: 1px solid var(--card-border);
+  border-radius: 6px;
+  background: var(--card-bg);
+  color: var(--txt-primary);
+}
+.servicio-row__subtotal { font-weight: 700; font-size: 12.5px; text-align: right; padding-right: 4px; }
+.servicio-row__del {
+  width: 26px; height: 26px;
+  border: none;
+  background: var(--red-bg);
+  color: var(--red);
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.servicios-suma {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+  color: var(--txt-secondary);
+  margin-bottom: 16px;
+}
+.servicios-suma strong { color: var(--txt-primary); }
+@media (max-width: 640px) {
+  .servicio-row { grid-template-columns: 1fr 1fr; }
+}
+
+/* ===== BOLETA ================================================================ */
+.boleta-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 18px; }
+.boleta-header h2 { font-size: 18px; font-weight: 700; color: var(--accent); }
+.boleta-numero { font-size: 13px; font-weight: 600; color: var(--txt-secondary); margin-top: 2px; }
+.boleta-fecha { text-align: right; font-size: 12.5px; color: var(--txt-muted); }
+.boleta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 18px; }
+.boleta-box { background: var(--main-bg); border: 1px solid var(--card-border); border-radius: var(--radius-sm); padding: 12px 14px; }
+.boleta-box h4 { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--txt-muted); margin-bottom: 6px; }
+.boleta-box p { font-size: 12.5px; color: var(--txt-secondary); line-height: 1.5; }
+.boleta-table { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
+.boleta-table th { text-align: left; padding: 8px 10px; font-size: 11px; font-weight: 700; color: var(--txt-muted); text-transform: uppercase; letter-spacing: .05em; background: var(--main-bg); border-bottom: 1px solid var(--card-border); }
+.boleta-table td { padding: 8px 10px; font-size: 12.5px; border-bottom: 1px solid var(--card-border); }
+.boleta-totales { margin-left: auto; width: 260px; display: flex; flex-direction: column; gap: 6px; }
+.boleta-totales > div { display: flex; justify-content: space-between; font-size: 13px; color: var(--txt-secondary); }
+.boleta-total-final { font-size: 15px !important; font-weight: 700; color: var(--txt-primary) !important; border-top: 1px solid var(--card-border); padding-top: 6px; margin-top: 2px; }
+.boleta-pagado { color: var(--green) !important; font-weight: 600; }
+
+/* ===== IMPRESIÓN DE BOLETA =================================================== */
+@media print {
+  body * { visibility: hidden; }
+  #boletaPrintArea, #boletaPrintArea * { visibility: visible; }
+  /* El modal normalmente recorta el contenido con overflow-y:auto y limita su
+     alto a 90vh; al imprimir se libera para que una boleta larga no se corte. */
+  .modal:has(#boletaPrintArea) { overflow: visible; max-height: none; box-shadow: none; position: static; }
+  .modal-overlay:has(#boletaPrintArea) { position: static; background: none; backdrop-filter: none; padding: 0; }
+  #boletaPrintArea { position: absolute; top: 0; left: 0; width: 100%; padding: 20px; }
+}
+
 /* ===== NOTIFICACIONES DROPDOWN ============================================= */
 .notif-wrapper { position: relative; }
 .notif-dropdown {

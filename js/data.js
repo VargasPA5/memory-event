@@ -7,6 +7,7 @@ const Data = (() => {
     INGRESOS:    'ep:ingresos',
     PROVEEDORES: 'ep:proveedores',
     USUARIOS:    'ep:usuarios',
+    BOLETAS:     'ep:boletas',
     META:        'ep:meta',
   };
 
@@ -100,6 +101,7 @@ const Data = (() => {
     [K.INGRESOS]:    'ingresos',
     [K.PROVEEDORES]: 'proveedores',
     [K.USUARIOS]:    'usuarios',
+    [K.BOLETAS]:     'boletas',
   };
 
   let _db = null, _fs = null;
@@ -323,5 +325,6 @@ const Data = (() => {
     ingresos:    module(K.INGRESOS),
     proveedores: module(K.PROVEEDORES),
     usuarios:    module(K.USUARIOS),
+    boletas:     module(K.BOLETAS),
   };
 })();
