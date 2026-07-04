@@ -18,7 +18,7 @@
     .conf-section-title svg{width:16px;height:16px;color:var(--accent);}
     .storage-bar{height:8px;background:#f1f5f9;border-radius:4px;overflow:hidden;margin-top:8px;}
     .storage-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--accent),#d4b77a);transition:width .5s ease;}
-    .danger-zone{border:1px solid var(--red-bg);border-radius:var(--radius-lg);padding:20px 24px;background:#fff;}
+    .danger-zone{border:1px solid var(--red-bg);border-radius:var(--radius-lg);padding:20px 24px;background:var(--card-bg);}
     .danger-zone h3{font-size:14px;font-weight:700;color:var(--red);margin-bottom:4px;}
     .danger-zone p{font-size:13px;color:var(--txt-secondary);margin-bottom:14px;}
     .logo-preview-card{background:var(--card-bg);border:1px solid var(--card-border);border-radius:var(--radius-lg);padding:24px;text-align:center;}
@@ -140,11 +140,11 @@
                 <svg viewBox="0 0 20 20" fill="currentColor"><path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z"/></svg>
                 Alertas del Sistema
               </div>
-              <div class="toggle-row"><div class="toggle-label"><h4>Nueva Reserva</h4><p>Notificar al crear una nueva reserva</p></div><label class="toggle"><input type="checkbox" checked/><span class="toggle-slider"></span></label></div>
-              <div class="toggle-row"><div class="toggle-label"><h4>Pago Recibido</h4><p>Notificar cuando se registra un pago</p></div><label class="toggle"><input type="checkbox" checked/><span class="toggle-slider"></span></label></div>
-              <div class="toggle-row"><div class="toggle-label"><h4>Evento Próximo (24h)</h4><p>Recordatorio un día antes del evento</p></div><label class="toggle"><input type="checkbox" checked/><span class="toggle-slider"></span></label></div>
-              <div class="toggle-row"><div class="toggle-label"><h4>Reserva Cancelada</h4><p>Notificar cuando se cancela una reserva</p></div><label class="toggle"><input type="checkbox"/><span class="toggle-slider"></span></label></div>
-              <div class="toggle-row"><div class="toggle-label"><h4>Nuevo Cliente</h4><p>Notificar cuando se registra un cliente</p></div><label class="toggle"><input type="checkbox"/><span class="toggle-slider"></span></label></div>
+              <div class="toggle-row"><div class="toggle-label"><h4>Nueva Reserva</h4><p>Notificar al crear una nueva reserva</p></div><label class="toggle"><input type="checkbox" id="cfgNotifReserva" checked/><span class="toggle-slider"></span></label></div>
+              <div class="toggle-row"><div class="toggle-label"><h4>Pago Recibido</h4><p>Notificar cuando se registra un pago</p></div><label class="toggle"><input type="checkbox" id="cfgNotifPago" checked/><span class="toggle-slider"></span></label></div>
+              <div class="toggle-row"><div class="toggle-label"><h4>Evento Próximo (24h)</h4><p>Recordatorio un día antes del evento</p></div><label class="toggle"><input type="checkbox" id="cfgNotifEvento" checked/><span class="toggle-slider"></span></label></div>
+              <div class="toggle-row"><div class="toggle-label"><h4>Reserva Cancelada</h4><p>Notificar cuando se cancela una reserva</p></div><label class="toggle"><input type="checkbox" id="cfgNotifCancelado"/><span class="toggle-slider"></span></label></div>
+              <div class="toggle-row"><div class="toggle-label"><h4>Nuevo Cliente</h4><p>Notificar cuando se registra un cliente</p></div><label class="toggle"><input type="checkbox" id="cfgNotifCliente"/><span class="toggle-slider"></span></label></div>
             </div>
             <div class="conf-section" style="border-bottom:none">
               <button class="btn btn--primary" onclick="guardarNotif()">Guardar preferencias</button>
@@ -326,17 +326,40 @@ function guardarEmpresa() {
 }
 
 function guardarNotif() {
+  const cfg = {
+    reserva:   document.getElementById('cfgNotifReserva').checked,
+    pago:      document.getElementById('cfgNotifPago').checked,
+    evento:    document.getElementById('cfgNotifEvento').checked,
+    cancelado: document.getElementById('cfgNotifCancelado').checked,
+    cliente:   document.getElementById('cfgNotifCliente').checked,
+  };
+  Storage.set('ep:config:notif', cfg);
   Toast.success('Preferencias de notificaciones guardadas ✓');
 }
 
 function guardarSeguridad() {
-  const nueva    = document.getElementById('cfgPassNueva').value;
-  const confirm  = document.getElementById('cfgPassConfirm').value;
-  if (!nueva) { Toast.error('Ingresa la nueva contraseña'); return; }
+  const actual  = document.getElementById('cfgPassActual').value;
+  const nueva   = document.getElementById('cfgPassNueva').value;
+  const confirm = document.getElementById('cfgPassConfirm').value;
+  const u       = Auth.get();
+  if (!u) return;
+
+  if (!actual) { Toast.error('Ingresa tu contraseña actual'); return; }
+  if (!nueva)  { Toast.error('Ingresa la nueva contraseña'); return; }
+  if (nueva.length < 8) { Toast.error('La contraseña debe tener al menos 8 caracteres'); return; }
   if (nueva !== confirm) { Toast.error('Las contraseñas no coinciden'); return; }
-  if (nueva.length < 6) { Toast.error('La contraseña debe tener al menos 6 caracteres'); return; }
+
+  const full = Data.usuarios.find(u.id);
+  if (!full || full.passwordHash !== btoa(actual)) {
+    Toast.error('La contraseña actual es incorrecta');
+    return;
+  }
+  if (actual === nueva) { Toast.warning('La nueva contraseña debe ser diferente a la actual'); return; }
+
+  Data.usuarios.update(u.id, { passwordHash: btoa(nueva) });
+  Auth.refresh();
   Toast.success('Contraseña actualizada ✓');
-  ['cfgPassActual','cfgPassNueva','cfgPassConfirm'].forEach(id=>document.getElementById(id).value='');
+  ['cfgPassActual','cfgPassNueva','cfgPassConfirm'].forEach(id => document.getElementById(id).value='');
 }
 
 /* ── Almacenamiento info ─────────────────────────────────────────────── */
@@ -392,7 +415,7 @@ function exportarDatos() {
   const blob = new Blob([JSON.stringify(backup, null, 2)], { type:'application/json' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = `eventospro_backup_${new Date().toISOString().split('T')[0]}.json`;
+  a.download = `memory_backup_${new Date().toISOString().split('T')[0]}.json`;
   a.click();
   Toast.success('Backup descargado ✓');
 }
@@ -453,6 +476,13 @@ function cargarConfig() {
   if (empresa.email)       document.getElementById('cfgEmailEmp').value    = empresa.email;
   if (empresa.direccion)   document.getElementById('cfgDireccion').value   = empresa.direccion;
   if (empresa.web)         document.getElementById('cfgWeb').value         = empresa.web;
+
+  const notif = Storage.get('ep:config:notif', {});
+  if (notif.reserva   !== undefined) document.getElementById('cfgNotifReserva').checked   = notif.reserva;
+  if (notif.pago      !== undefined) document.getElementById('cfgNotifPago').checked      = notif.pago;
+  if (notif.evento    !== undefined) document.getElementById('cfgNotifEvento').checked    = notif.evento;
+  if (notif.cancelado !== undefined) document.getElementById('cfgNotifCancelado').checked = notif.cancelado;
+  if (notif.cliente   !== undefined) document.getElementById('cfgNotifCliente').checked   = notif.cliente;
 }
 
 /* ── Init ────────────────────────────────────────────────────────────── */

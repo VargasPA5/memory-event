@@ -1202,4 +1202,7 @@ html[data-theme="dark"] .demo-fill,
 html[data-theme="dark"] .btn-export:hover { background: #1a1814; }
 html[data-theme="dark"] .topbar__theme svg,
 html[data-theme="dark"] .topbar__notif svg { color: var(--txt-secondary); }
+
+/* ===== ANIMATIONS =========================================================== */
+@keyframes spin { to { transform: rotate(360deg); } }
 html[data-theme="dark"] ::-webkit-scrollbar-thumb { background: #302e26; }
