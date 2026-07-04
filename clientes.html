@@ -119,6 +119,7 @@
 <script src="js/data.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/app.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
 let editandoId = null;
 
@@ -249,17 +250,16 @@ async function pedirEliminar(id) {
   Toast.success('Cliente eliminado');
 }
 
-/* ── CSV export ─────────────────────────────────────────────────────── */
+/* ── Excel export ───────────────────────────────────────────────────── */
 function exportarCSV() {
   const clientes = Data.clientes.getAll();
   const rows = [['ID','Nombre','Email','Teléfono','Tipo','Dirección','Registrado']];
-  clientes.forEach(c => rows.push([c.id,`"${c.nombre}"`,`"${c.email}"`,c.telefono||'',c.tipo,`"${c.direccion||''}"`,c.createdAt?Fmt.date(c.createdAt):'']));
-  const csv = rows.map(r=>r.join(',')).join('\n');
-  const a = document.createElement('a');
-  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent('﻿'+csv);
-  a.download = 'clientes.csv';
-  a.click();
-  Toast.success('CSV exportado ✓');
+  clientes.forEach(c => rows.push([c.id, c.nombre, c.email, c.telefono||'', c.tipo, c.direccion||'', c.createdAt?Fmt.date(c.createdAt):'']));
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  XLSX.utils.book_append_sheet(wb, ws, 'Clientes');
+  XLSX.writeFile(wb, 'clientes.xlsx');
+  Toast.success('Excel exportado ✓');
 }
 
 /* ── Storage indicator ──────────────────────────────────────────────── */

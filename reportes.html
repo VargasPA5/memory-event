@@ -122,6 +122,7 @@
 </div>
 <div id="toast-container"></div>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="js/storage.js"></script>
 <script src="js/auth.js"></script>
 <script src="js/data.js"></script>
@@ -315,7 +316,7 @@ function exportarIngresos() {
   const s = Data.stats();
   const rows = [['Mes','Ingresos (S/)'], ...s.ingresos.porMes.map(m=>[m.label,m.total])];
   descargarCSV(rows, 'reporte_ingresos_mensuales.csv');
-  Toast.success('CSV exportado ✓');
+  Toast.success('Excel exportado ✓');
 }
 
 function exportarClientes() {
@@ -325,7 +326,7 @@ function exportarClientes() {
   const sorted = Object.entries(clMap).sort((a,b)=>b[1]-a[1]);
   const rows = [['Cliente','Total Ingresos (S/)'], ...sorted.map(([id,t])=>[Data.clienteNombre(parseInt(id)),t])];
   descargarCSV(rows, 'reporte_top_clientes.csv');
-  Toast.success('CSV exportado ✓');
+  Toast.success('Excel exportado ✓');
 }
 
 function exportarResumen() {
@@ -348,10 +349,10 @@ function exportarResumen() {
 }
 
 function descargarCSV(rows, nombre) {
-  const csv = rows.map(r=>r.join(',')).join('\n');
-  const a = document.createElement('a');
-  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent('﻿'+csv);
-  a.download = nombre; a.click();
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  XLSX.utils.book_append_sheet(wb, ws, 'Datos');
+  XLSX.writeFile(wb, nombre.replace(/\.csv$/, '.xlsx'));
 }
 
 function actualizarTodo() {

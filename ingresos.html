@@ -117,6 +117,7 @@
 <script src="js/data.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/app.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
 let editandoId = null;
 
@@ -280,12 +281,12 @@ async function pedirEliminar(id) {
 
 function exportarCSV() {
   const rows = [['Código','Reserva','Cliente','Concepto','Fecha','Monto','Estado','Método']];
-  Data.ingresos.getAll().forEach(i => rows.push([i.codigo||'',Data.reservaCodigo(i.reservaId),`"${Data.clienteNombre(i.clienteId)}"`,`"${i.concepto||''}"`,i.fecha,i.monto||0,i.estado,i.metodo||'']));
-  const csv = rows.map(r=>r.join(',')).join('\n');
-  const a = document.createElement('a');
-  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent('﻿'+csv);
-  a.download = 'ingresos.csv'; a.click();
-  Toast.success('CSV exportado ✓');
+  Data.ingresos.getAll().forEach(i => rows.push([i.codigo||'', Data.reservaCodigo(i.reservaId), Data.clienteNombre(i.clienteId), i.concepto||'', i.fecha, i.monto||0, i.estado, i.metodo||'']));
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  XLSX.utils.book_append_sheet(wb, ws, 'Ingresos');
+  XLSX.writeFile(wb, 'ingresos.xlsx');
+  Toast.success('Excel exportado ✓');
 }
 
 renderTabla();
