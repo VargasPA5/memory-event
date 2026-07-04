@@ -340,6 +340,7 @@ img { display: block; max-width: 100%; }
 .hamburger:hover { background: var(--main-bg); }
 
 .topbar__search {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -351,6 +352,7 @@ img { display: block; max-width: 100%; }
   flex: 1;
   max-width: 340px;
   transition: border-color var(--t), box-shadow var(--t);
+  overflow: visible;
 }
 .topbar__search:focus-within {
   border-color: var(--accent);
@@ -1154,6 +1156,85 @@ img { display: block; max-width: 100%; }
 @media (max-width: 900px) {
   #anexosGrid { grid-template-columns: repeat(2,1fr) !important; }
 }
+
+/* ===== NOTIFICACIONES DROPDOWN ============================================= */
+.notif-wrapper { position: relative; }
+.notif-dropdown {
+  display: none;
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 320px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  box-shadow: 0 8px 28px rgba(0,0,0,.14);
+  z-index: 300;
+  overflow: hidden;
+}
+.notif-wrapper--open .notif-dropdown { display: block; }
+.notif-dropdown__header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 16px 10px;
+  border-bottom: 1px solid var(--card-border);
+}
+.notif-dropdown__title { font-size: 13px; font-weight: 600; color: var(--txt-primary); }
+.notif-dropdown__mark-all {
+  font-size: 11px; color: var(--accent); background: none;
+  border: none; cursor: pointer; padding: 0; transition: opacity var(--t);
+}
+.notif-dropdown__mark-all:hover { opacity: .7; }
+.notif-dropdown__list { max-height: 360px; overflow-y: auto; }
+.notif-item {
+  display: flex; gap: 10px; padding: 11px 16px;
+  border-bottom: 1px solid var(--card-border);
+  transition: background var(--t);
+}
+.notif-item:last-child { border-bottom: none; }
+.notif-item:hover { background: var(--main-bg); }
+.notif-item--new { background: rgba(201,163,90,.07); }
+.notif-item--new:hover { background: rgba(201,163,90,.11); }
+.notif-item__icon {
+  width: 32px; height: 32px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; flex-shrink: 0;
+}
+.notif-item__icon--pago    { background: var(--green-bg);  }
+.notif-item__icon--reserva { background: var(--blue-bg);   }
+.notif-item__icon--evento  { background: var(--orange-bg); }
+.notif-item__body { flex: 1; min-width: 0; }
+.notif-item__title { font-size: 12.5px; font-weight: 500; color: var(--txt-primary); line-height: 1.4; }
+.notif-item__sub   { font-size: 11.5px; color: var(--txt-secondary); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.notif-item__time  { font-size: 11px; color: var(--txt-muted); margin-top: 3px; }
+.notif-empty { padding: 32px 16px; text-align: center; font-size: 13px; color: var(--txt-muted); }
+
+/* ===== BÚSQUEDA GLOBAL DROPDOWN ============================================ */
+.search-dropdown {
+  display: none;
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0; right: 0;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  box-shadow: 0 8px 28px rgba(0,0,0,.14);
+  z-index: 300;
+  overflow: hidden;
+}
+.search-dropdown--open { display: block; }
+.search-result-item {
+  display: flex; gap: 10px; align-items: center;
+  padding: 10px 14px; text-decoration: none; color: var(--txt-primary);
+  border-bottom: 1px solid var(--card-border);
+  transition: background var(--t);
+}
+.search-result-item:last-child { border-bottom: none; }
+.search-result-item:hover { background: var(--main-bg); }
+.search-result-icon { font-size: 16px; width: 24px; text-align: center; flex-shrink: 0; }
+.search-result-body { flex: 1; min-width: 0; }
+.search-result-label { font-size: 12.5px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.search-result-sub   { font-size: 11px; color: var(--txt-secondary); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.search-no-results { padding: 20px 14px; text-align: center; font-size: 12.5px; color: var(--txt-muted); }
 
 /* ===== TEMA OSCURO ========================================================== */
 html[data-theme="dark"] {

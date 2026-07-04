@@ -124,10 +124,19 @@ const buildTopbarHTML = () => {
         <svg id="themeIconSun" viewBox="0 0 20 20" fill="currentColor" style="display:${isDark ? 'block' : 'none'}"><path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 9a1 1 0 110 2h-1a1 1 0 110-2h1zM4 9a1 1 0 110 2H3a1 1 0 110-2h1zm9.193 6.243a1 1 0 011.414 0l.707.707a1 1 0 11-1.414 1.414l-.707-.707a1 1 0 010-1.414zM4.464 4.343a1 1 0 011.414 1.414l-.707.707A1 1 0 013.757 5.05l.707-.707zM10 17a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zm-5.536-1.757a1 1 0 010 1.414l-.707.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0z"/></svg>
         <svg id="themeIconMoon" viewBox="0 0 20 20" fill="currentColor" style="display:${isDark ? 'none' : 'block'}"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"/></svg>
       </button>
-      <button class="topbar__notif" title="Notificaciones">
-        <svg viewBox="0 0 20 20" fill="currentColor"><path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z"/></svg>
-        <span class="topbar__notif-dot"></span>
-      </button>
+      <div class="notif-wrapper" id="notifWrapper">
+        <button class="topbar__notif" id="topbarNotifBtn" title="Notificaciones">
+          <svg viewBox="0 0 20 20" fill="currentColor"><path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z"/></svg>
+          <span class="topbar__notif-dot" id="notifDot"></span>
+        </button>
+        <div class="notif-dropdown" id="notifDropdown">
+          <div class="notif-dropdown__header">
+            <span class="notif-dropdown__title">Notificaciones</span>
+            <button class="notif-dropdown__mark-all" id="notifMarkAll">Marcar todo leído</button>
+          </div>
+          <div class="notif-dropdown__list" id="notifList"></div>
+        </div>
+      </div>
       <a href="perfil.html" class="topbar__user" style="text-decoration:none;color:inherit">
         ${userAvatar}
         <div class="topbar__user-info">
@@ -152,6 +161,147 @@ const initThemeToggle = () => {
   btn.addEventListener('click', () => syncThemeIcons(Theme.toggle()));
   Theme.onChange(syncThemeIcons);
   syncThemeIcons(Theme.get());
+};
+
+/* ── Tiempo relativo ─────────────────────────────────────────────────── */
+const _timeAgo = ts => {
+  const diff = Date.now() - ts;
+  const m = Math.floor(diff / 60000);
+  if (m < 1)  return 'Ahora mismo';
+  if (m < 60) return `Hace ${m}m`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `Hace ${h}h`;
+  return `Hace ${Math.floor(h / 24)}d`;
+};
+
+/* ── Sistema de notificaciones ──────────────────────────────────────── */
+const buildNotifItems = () => {
+  const items = [];
+  const now   = Date.now();
+  try {
+    Data.ingresos.getAll().forEach(i => {
+      const ts = new Date(i.createdAt || i.fecha || 0).getTime();
+      if (!ts) return;
+      const monto = 'S/ ' + parseFloat(i.monto || 0).toFixed(2);
+      items.push({ ts, type: 'pago',    title: `Pago registrado — ${monto}`,                 sub: Data.clienteNombre(i.clienteId) });
+    });
+  } catch(e) {}
+  try {
+    Data.reservas.getAll().forEach(r => {
+      const ts = new Date(r.createdAt || 0).getTime();
+      if (!ts) return;
+      items.push({ ts, type: 'reserva', title: `Nueva reserva — ${Data.reservaCodigo(r.id)}`, sub: Data.clienteNombre(r.clienteId) });
+    });
+  } catch(e) {}
+  try {
+    const en7 = now + 7 * 86400000;
+    Data.eventos.getAll().forEach(e => {
+      const ts = new Date(e.fecha || 0).getTime();
+      if (!ts || ts < now || ts > en7) return;
+      const d = Math.ceil((ts - now) / 86400000);
+      items.push({ ts, type: 'evento',  title: `Evento próximo — ${e.nombre}`,                sub: d < 1 ? 'Hoy' : d === 1 ? 'Mañana' : `En ${d} días` });
+    });
+  } catch(e) {}
+  return items.sort((a, b) => b.ts - a.ts).slice(0, 15);
+};
+
+const renderNotifDropdown = () => {
+  const list = document.getElementById('notifList');
+  const dot  = document.getElementById('notifDot');
+  if (!list) return;
+  const lastRead = Storage.get('ep:notif:lastRead', 0);
+  const items    = buildNotifItems();
+  const unread   = items.filter(i => i.ts > lastRead).length;
+  if (dot) dot.style.display = unread > 0 ? '' : 'none';
+  if (!items.length) {
+    list.innerHTML = '<div class="notif-empty">Sin notificaciones recientes</div>';
+    return;
+  }
+  list.innerHTML = items.map(i => {
+    const isNew = i.ts > lastRead;
+    return `<div class="notif-item${isNew ? ' notif-item--new' : ''}">
+      <div class="notif-item__icon notif-item__icon--${i.type}">${i.type==='pago' ? '💰' : i.type==='reserva' ? '📋' : '📅'}</div>
+      <div class="notif-item__body">
+        <div class="notif-item__title">${escHtml(i.title)}</div>
+        ${i.sub ? `<div class="notif-item__sub">${escHtml(i.sub)}</div>` : ''}
+        <div class="notif-item__time">${_timeAgo(i.ts)}</div>
+      </div>
+    </div>`;
+  }).join('');
+};
+
+const initNotifDropdown = () => {
+  const btn     = document.getElementById('topbarNotifBtn');
+  const wrapper = document.getElementById('notifWrapper');
+  const markAll = document.getElementById('notifMarkAll');
+  if (!btn || !wrapper) return;
+
+  renderNotifDropdown();
+
+  btn.addEventListener('click', e => {
+    e.stopPropagation();
+    wrapper.classList.toggle('notif-wrapper--open');
+    if (wrapper.classList.contains('notif-wrapper--open')) renderNotifDropdown();
+  });
+
+  markAll?.addEventListener('click', e => {
+    e.stopPropagation();
+    Storage.set('ep:notif:lastRead', Date.now());
+    renderNotifDropdown();
+  });
+
+  document.addEventListener('click', e => {
+    if (!wrapper.contains(e.target)) wrapper.classList.remove('notif-wrapper--open');
+  });
+};
+
+/* ── Búsqueda global ─────────────────────────────────────────────────── */
+const initGlobalSearch = () => {
+  const input = document.getElementById('globalSearch');
+  const wrap  = input?.closest('.topbar__search');
+  if (!input || !wrap) return;
+
+  const dd = document.createElement('div');
+  dd.className = 'search-dropdown';
+  dd.id = 'searchDropdown';
+  wrap.appendChild(dd);
+
+  const run = () => {
+    const q = input.value.trim().toLowerCase();
+    if (q.length < 2) { dd.classList.remove('search-dropdown--open'); return; }
+    const results = [];
+    try { Data.clientes.getAll().filter(c =>
+      c.nombre.toLowerCase().includes(q) || (c.email||'').toLowerCase().includes(q)
+    ).slice(0,4).forEach(c => results.push({ label:c.nombre, sub:c.email, href:'clientes.html', icon:'👤' })); } catch(e){}
+    try { Data.eventos.getAll().filter(e =>
+      e.nombre.toLowerCase().includes(q)
+    ).slice(0,3).forEach(e => results.push({ label:e.nombre, sub:e.fecha||'', href:'eventos.html', icon:'📅' })); } catch(e){}
+    try { Data.reservas.getAll().filter(r =>
+      (r.codigo||'').toLowerCase().includes(q) || (Data.clienteNombre(r.clienteId)||'').toLowerCase().includes(q)
+    ).slice(0,3).forEach(r => results.push({ label:Data.reservaCodigo(r.id)||('Reserva #'+r.id), sub:Data.clienteNombre(r.clienteId), href:'reservas.html', icon:'📋' })); } catch(e){}
+    try { Data.proveedores.getAll().filter(p =>
+      p.nombre.toLowerCase().includes(q)
+    ).slice(0,3).forEach(p => results.push({ label:p.nombre, sub:p.servicio||'', href:'proveedores.html', icon:'🏢' })); } catch(e){}
+    if (!results.length) {
+      dd.innerHTML = `<div class="search-no-results">Sin resultados para "<strong>${escHtml(q)}</strong>"</div>`;
+    } else {
+      dd.innerHTML = results.map(r => `<a href="${r.href}" class="search-result-item">
+        <span class="search-result-icon">${r.icon}</span>
+        <div class="search-result-body">
+          <div class="search-result-label">${escHtml(r.label)}</div>
+          ${r.sub ? `<div class="search-result-sub">${escHtml(r.sub)}</div>` : ''}
+        </div></a>`).join('');
+    }
+    dd.classList.add('search-dropdown--open');
+  };
+
+  input.addEventListener('input', run);
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Escape') { dd.classList.remove('search-dropdown--open'); input.value = ''; }
+  });
+  document.addEventListener('click', e => {
+    if (!wrap.contains(e.target)) dd.classList.remove('search-dropdown--open');
+  });
 };
 
 /* ── Inyectar sidebar + topbar ──────────────────────────────────────── */
@@ -210,6 +360,8 @@ const initMobileNav = () => {
   initSidebarToggle();
   initMobileNav();
   initThemeToggle();
+  initNotifDropdown();
+  initGlobalSearch();
 
   /* Repinta el logo del sidebar si cambia en configuración (misma pestaña
      u otra recién sincronizada desde Firestore) sin recargar la página. */
