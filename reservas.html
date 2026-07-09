@@ -126,10 +126,31 @@
 <script src="js/ui.js"></script>
 <script src="js/app.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script>
+<script type="module">
+import * as reservasService from './js/services/reservasService.js';
+import * as eventosService from './js/services/eventosService.js';
+import * as clientesService from './js/services/clientesService.js';
+
 let editandoId = null;
+let todasLasReservas = [];
+let eventosDisponibles = [];
+let clientesDisponibles = [];
 
 const PRESET_SERVICIOS = ['Alquiler del local','Comida / Catering','Decoración','Arreglos florales','DJ','Fotografía','Video','Animación','Seguridad','Limpieza','Otros'];
+
+window.agregarServicioRow = agregarServicioRow;
+window.onServicioNombreChange = onServicioNombreChange;
+window.recalcServicioRow = recalcServicioRow;
+window.usarSumaComoTotal = usarSumaComoTotal;
+window.onEventoChange = onEventoChange;
+window.calcularSaldo = calcularSaldo;
+window.renderTabla = renderTabla;
+window.abrirModal = abrirModal;
+window.cerrarModal = cerrarModal;
+window.guardarReserva = guardarReserva;
+window.editarReserva = editarReserva;
+window.pedirEliminar = pedirEliminar;
+window.exportarCSV = exportarCSV;
 
 /* ── Servicios contratados ────────────────────────────────────────────── */
 function agregarServicioRow(data = {}) {
@@ -201,7 +222,12 @@ function usarSumaComoTotal() {
 
 function renderServicios(lista) {
   document.getElementById('serviciosRows').innerHTML = '';
-  (lista || []).forEach(s => agregarServicioRow(s));
+  (lista || []).forEach(s => agregarServicioRow({
+    nombre: s.nombre,
+    precio: s.precio_unitario ?? s.precio ?? 0,
+    cantidad: s.cantidad || 1,
+    observaciones: s.observaciones || ''
+  }));
   recalcSumaServicios();
 }
 
@@ -222,7 +248,7 @@ function recolectarServicios() {
 
     if (sel.value === 'Otros' && !nombre) { Toast.error('Especifica el nombre del servicio "Otros"'); return null; }
     if (precio <= 0) { Toast.error(`El servicio "${nombre}" debe tener un precio mayor a 0`); return null; }
-    resultado.push({ nombre, precio, cantidad, subtotal: precio * cantidad, observaciones });
+    resultado.push({ nombre, precio_unitario: precio, cantidad, observaciones });
   }
   return resultado;
 }
@@ -232,20 +258,21 @@ function poblarSelects() {
   const selEv = document.getElementById('fEvento');
   selCl.innerHTML = '<option value="">— Seleccionar —</option>';
   selEv.innerHTML = '<option value="">— Seleccionar —</option>';
-  Data.clientes.getAll().forEach(c => {
+  selCl.disabled = true;
+  clientesDisponibles.forEach(c => {
     const o = document.createElement('option'); o.value = c.id; o.textContent = c.nombre; selCl.appendChild(o);
   });
-  Data.eventos.getAll().forEach(e => {
+  eventosDisponibles.forEach(e => {
     const o = document.createElement('option'); o.value = e.id; o.textContent = e.nombre; selEv.appendChild(o);
   });
 }
 
 function onEventoChange() {
   const evId = parseInt(document.getElementById('fEvento').value);
-  const ev = Data.eventos.find(evId);
+  const ev = eventosDisponibles.find(x => Number(x.id) === evId);
   if (ev) {
     document.getElementById('fFecha').value = ev.fecha || '';
-    document.getElementById('fCliente').value = ev.clienteId || '';
+    document.getElementById('fCliente').value = ev.cliente_id || '';
     if (ev.presupuesto) document.getElementById('fTotal').value = ev.presupuesto;
     calcularSaldo();
   }
@@ -257,20 +284,14 @@ function calcularSaldo() {
   document.getElementById('fSaldo').value = Math.max(0, total - adelanto).toFixed(2);
 }
 
-function nextCodigo() {
-  const reservas = Data.reservas.getAll();
-  const max = reservas.reduce((m, r) => Math.max(m, parseInt((r.codigo||'RES-000').split('-')[1]||0)), 0);
-  return 'RES-' + String(max+1).padStart(3,'0');
-}
-
 function renderTabla() {
   const txt    = (document.getElementById('searchInput').value||'').toLowerCase();
   const estado = document.getElementById('filtroEstado').value;
   const tbody  = document.getElementById('tablaBody');
 
-  const todos = Data.reservas.getAll();
+  const todos = todasLasReservas;
   const filtrados = todos.filter(r => {
-    const nom = (Data.eventoNombre(r.eventoId)+' '+Data.clienteNombre(r.clienteId)+' '+(r.codigo||'')).toLowerCase();
+    const nom = (`${r.evento?.nombre || ''} ${r.cliente?.nombre || ''} ${r.codigo || ''}`).toLowerCase();
     return nom.includes(txt) && (!estado || r.estado === estado);
   });
 
@@ -283,12 +304,13 @@ function renderTabla() {
   tbody.innerHTML = '';
   if (!filtrados.length) { tbody.innerHTML = emptyState('No se encontraron reservas.'); return; }
 
-  filtrados.sort((a,b) => new Date(b.createdAt||0)-new Date(a.createdAt||0)).forEach(r => {
+  filtrados.sort((a,b) => new Date(b.created_at||0)-new Date(a.created_at||0)).forEach(r => {
+    const clienteNombre = r.cliente?.nombre || '—';
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td><strong class="r-codigo"></strong></td>
       <td class="r-evento"></td>
-      <td><div class="client-cell">${avatarEl(Data.clienteNombre(r.clienteId), r.clienteId)}<span class="r-cliente"></span></div></td>
+      <td><div class="client-cell">${avatarEl(clienteNombre, r.cliente_id)}<span class="r-cliente"></span></div></td>
       <td>${Fmt.dateShort(r.fecha)}</td>
       <td>${badge(r.estado)}</td>
       <td><strong>${Fmt.currency(r.total)}</strong></td>
@@ -305,8 +327,8 @@ function renderTabla() {
         </div>
       </td>`;
     tr.querySelector('.r-codigo').textContent  = r.codigo || '—';
-    tr.querySelector('.r-evento').textContent  = Data.eventoNombre(r.eventoId);
-    tr.querySelector('.r-cliente').textContent = Data.clienteNombre(r.clienteId);
+    tr.querySelector('.r-evento').textContent  = r.evento?.nombre || '—';
+    tr.querySelector('.r-cliente').textContent = clienteNombre;
     tbody.appendChild(tr);
   });
 }
@@ -327,8 +349,7 @@ function limpiarForm() {
   renderServicios([]);
 }
 
-function guardarReserva() {
-  const clienteId = parseInt(document.getElementById('fCliente').value)||null;
+async function guardarReserva() {
   const eventoId  = parseInt(document.getElementById('fEvento').value)||null;
   const fecha     = document.getElementById('fFecha').value;
   const estado    = document.getElementById('fEstado').value;
@@ -337,7 +358,6 @@ function guardarReserva() {
   const saldo     = Math.max(0, total - adelanto);
   const notas     = document.getElementById('fNotas').value.trim();
 
-  if (!clienteId)  { Toast.error('Selecciona un cliente'); return; }
   if (!eventoId)   { Toast.error('Selecciona un evento'); return; }
   if (!fecha)      { Toast.error('La fecha es obligatoria'); return; }
   if (total <= 0)  { Toast.error('El total debe ser mayor a 0'); return; }
@@ -345,27 +365,28 @@ function guardarReserva() {
   if (adelanto > total) { Toast.error('El adelanto no puede superar el total'); return; }
 
   const servicios = recolectarServicios();
-  if (servicios === null) return; // error de validación ya mostrado
+  if (servicios === null) return;
 
-  if (editandoId !== null) {
-    Data.reservas.update(editandoId, { clienteId, eventoId, fecha, estado, total, adelanto, saldo, notas, servicios });
-    Toast.success('Reserva actualizada ✓');
-  } else {
-    Data.reservas.create({ codigo: nextCodigo(), clienteId, eventoId, fecha, estado, total, adelanto, saldo, notas, servicios });
-    Toast.success('Reserva guardada ✓');
-  }
+  const payload = { evento_id: eventoId, fecha, estado, total, adelanto, saldo, notas };
+  const res = editandoId !== null
+    ? await reservasService.actualizarReservaConServicios(editandoId, payload, servicios)
+    : await reservasService.crear(payload, servicios);
+
+  if (res.error) { Toast.error('Error al guardar reserva: ' + res.error); return; }
+  Toast.success(editandoId ? 'Reserva actualizada ✓' : 'Reserva guardada ✓');
   cerrarModal();
-  renderTabla();
+  await cargarReservas();
 }
 
-function editarReserva(id) {
-  const r = Data.reservas.find(id);
+async function editarReserva(id) {
+  const { data: r, error } = await reservasService.getById(id);
+  if (error) { Toast.error('Error al cargar reserva'); return; }
   if (!r) return;
   editandoId = id;
   poblarSelects();
   document.getElementById('modalTitulo').textContent = 'Editar Reserva';
-  document.getElementById('fCliente').value  = r.clienteId || '';
-  document.getElementById('fEvento').value   = r.eventoId  || '';
+  document.getElementById('fCliente').value  = r.cliente_id || '';
+  document.getElementById('fEvento').value   = r.evento_id  || '';
   document.getElementById('fFecha').value    = r.fecha || '';
   document.getElementById('fEstado').value   = r.estado;
   document.getElementById('fTotal').value    = r.total || '';
@@ -377,21 +398,23 @@ function editarReserva(id) {
 }
 
 async function pedirEliminar(id) {
-  const dep = Data.depReserva(id);
+  const { data: dep, error } = await reservasService.getDependencias(id);
+  if (error) { Toast.error('Error al verificar dependencias'); return; }
   if (dep.ingresos) {
     Toast.warning(`No se puede eliminar: tiene ${dep.ingresos} pago${dep.ingresos>1?'s':''} registrados`);
     return;
   }
   const ok = await Confirm({ title:'¿Eliminar reserva?', message:'Esta acción no se puede deshacer.', okText:'Sí, eliminar' });
   if (!ok) return;
-  Data.reservas.delete(id);
-  renderTabla();
+  const delRes = await reservasService.eliminar(id);
+  if (delRes.error) { Toast.error('No se pudo eliminar. Verifica permisos o dependencias.'); return; }
+  await cargarReservas();
   Toast.success('Reserva eliminada');
 }
 
 function exportarCSV() {
   const rows = [['Código','Evento','Cliente','Fecha','Estado','Total','Adelanto','Saldo']];
-  Data.reservas.getAll().forEach(r => rows.push([r.codigo||'', Data.eventoNombre(r.eventoId), Data.clienteNombre(r.clienteId), r.fecha, r.estado, r.total||0, r.adelanto||0, r.saldo||0]));
+  todasLasReservas.forEach(r => rows.push([r.codigo||'', r.evento?.nombre || '', r.cliente?.nombre || '', r.fecha, r.estado, r.total||0, r.adelanto||0, r.saldo||0]));
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.aoa_to_sheet(rows);
   XLSX.utils.book_append_sheet(wb, ws, 'Reservas');
@@ -399,7 +422,28 @@ function exportarCSV() {
   Toast.success('Excel exportado ✓');
 }
 
-renderTabla();
+async function cargarReservas() {
+  const { data, error } = await reservasService.getAll();
+  if (error) { Toast.error('Error al cargar reservas'); return; }
+  todasLasReservas = data || [];
+  renderTabla();
+}
+
+async function inicializar() {
+  const [resEventos, resClientes] = await Promise.all([
+    eventosService.getAll(),
+    clientesService.getAll()
+  ]);
+
+  if (resEventos.error) Toast.error('Error al cargar eventos disponibles');
+  if (resClientes.error) Toast.error('Error al cargar clientes');
+
+  eventosDisponibles = resEventos.data || [];
+  clientesDisponibles = resClientes.data || [];
+  await cargarReservas();
+}
+
+inicializar();
 </script>
 </body>
 </html>

@@ -8,7 +8,8 @@
      `fn_reserva_cliente_desde_evento` — deriva del evento padre.
    - El campo `saldo` se sincroniza automáticamente via `fn_sync_saldo_reserva`
      al registrar/actualizar ingresos.
-   - `planificador_id` se asigna desde auth.uid() en el INSERT.            */
+   - `planificador_id` lo completa PostgreSQL desde auth.uid(); el frontend
+     nunca debe enviarlo.                                                   */
 
 import { supabase } from '../supabaseClient.js';
 
@@ -17,10 +18,55 @@ const _err = (error, ctx) => {
   return error?.message || 'Error inesperado';
 };
 
-const _uid = async () => {
-  const { data: { user } } = await supabase.auth.getUser();
-  return user?.id ?? null;
+const _limpiarCabecera = (campos = {}, parcial = false) => {
+  const {
+    id,
+    codigo,
+    planificador_id,
+    cliente_id,
+    created_by,
+    created_at,
+    updated_by,
+    updated_at,
+    evento,
+    cliente,
+    planificador,
+    servicios,
+    ...permitidos
+  } = campos;
+
+  const payload = {};
+
+  if (!parcial || 'evento_id' in permitidos) payload.evento_id = permitidos.evento_id;
+  if (!parcial || 'fecha' in permitidos) payload.fecha = permitidos.fecha;
+  if (!parcial || 'estado' in permitidos) payload.estado = permitidos.estado || 'Pendiente';
+  if (!parcial || 'notas' in permitidos) payload.notas = permitidos.notas || null;
+  if (!parcial || 'total' in permitidos) payload.total = Number(permitidos.total ?? 0);
+  if (!parcial || 'adelanto' in permitidos) payload.adelanto = Number(permitidos.adelanto ?? 0);
+
+  if ('total' in payload || 'adelanto' in payload) {
+    const total = Number(payload.total ?? permitidos.total ?? 0);
+    const adelanto = Number(payload.adelanto ?? permitidos.adelanto ?? 0);
+    payload.saldo = Math.max(0, total - adelanto);
+  }
+
+  return payload;
 };
+
+const _limpiarServicio = (servicio, reservaId) => ({
+  reserva_id: reservaId,
+  servicio_id: servicio.servicio_id ?? null,
+  nombre: servicio.nombre,
+  cantidad: Number.parseInt(servicio.cantidad, 10) || 1,
+  precio_unitario: Number(servicio.precio_unitario ?? servicio.precio ?? 0),
+  observaciones: servicio.observaciones || null,
+});
+
+const _limpiarServiciosRpc = (servicios = []) => servicios.map(servicio => {
+  const limpio = _limpiarServicio(servicio, null);
+  const { reserva_id, ...payload } = limpio;
+  return payload;
+});
 
 /* ── Reservas ────────────────────────────────────────────────────────────── */
 
@@ -78,6 +124,7 @@ export const getById = async (id) => {
   ]);
 
   if (resRes.error) return { data: null, error: _err(resRes.error, `getById(${id})`) };
+  if (svcRes.error) return { data: null, error: _err(svcRes.error, `getById(${id}) servicios`) };
 
   return {
     data: { ...resRes.data, servicios: svcRes.data ?? [] },
@@ -116,55 +163,15 @@ export const getByCliente = async (clienteId) => {
  * @param {Array<{nombre, cantidad, precio_unitario, observaciones?}>} [servicios]
  */
 export const crear = async (campos, servicios = []) => {
-  const uid = await _uid();
-  if (!uid) return { data: null, error: 'No hay sesión activa' };
+  const payload = _limpiarCabecera(campos);
 
-  // La BD calcula saldo; lo enviamos como total - adelanto para el check constraint.
-  const adelanto = Number(campos.adelanto) || 0;
-  const total    = Number(campos.total)    || 0;
+  const { data, error } = await supabase.rpc('fn_crear_reserva_con_servicios', {
+    p_campos: payload,
+    p_servicios: _limpiarServiciosRpc(servicios),
+  });
 
-  const payload = {
-    planificador_id: uid,
-    evento_id:       campos.evento_id,
-    fecha:           campos.fecha,
-    estado:          campos.estado || 'Pendiente',
-    total,
-    adelanto,
-    saldo:           Math.max(0, total - adelanto),
-    notas:           campos.notas || null,
-    // codigo: generado por trigger fn_generar_codigo_reserva
-    // cliente_id: derivado por trigger fn_reserva_cliente_desde_evento
-  };
-
-  const { data: reserva, error: errRes } = await supabase
-    .from('reservas')
-    .insert(payload)
-    .select()
-    .single();
-
-  if (errRes) return { data: null, error: _err(errRes, 'crear') };
-
-  // Insertar servicios de la reserva si los hay
-  if (servicios.length > 0) {
-    const svcPayload = servicios.map(s => ({
-      reserva_id:     reserva.id,
-      servicio_id:    s.servicio_id ?? null,
-      nombre:         s.nombre,
-      cantidad:       s.cantidad        || 1,
-      precio_unitario: s.precio_unitario || 0,
-      observaciones:  s.observaciones   || null,
-    }));
-
-    const { error: errSvc } = await supabase
-      .from('reserva_servicios')
-      .insert(svcPayload);
-
-    if (errSvc) {
-      console.warn('[reservasService] crear — servicios parcialmente fallidos:', errSvc);
-    }
-  }
-
-  return { data: reserva, error: null };
+  if (error) return { data: null, error: _err(error, 'crear') };
+  return { data, error: null };
 };
 
 /**
@@ -174,16 +181,22 @@ export const crear = async (campos, servicios = []) => {
  * @param {object} cambios
  */
 export const actualizar = async (id, cambios) => {
-  const { planificador_id, cliente_id, codigo, created_by, created_at, ...campos } = cambios;
+  const campos = _limpiarCabecera(cambios, true);
 
-  // Recalcular saldo si cambiaron total o adelanto
-  if ('total' in campos || 'adelanto' in campos) {
-    const { data: actual } = await supabase
+  Object.keys(campos).forEach(key => {
+    if (campos[key] === undefined) delete campos[key];
+  });
+
+  if (('total' in campos && !('adelanto' in campos)) || ('adelanto' in campos && !('total' in campos))) {
+    const { data: actual, error: errActual } = await supabase
       .from('reservas')
       .select('total, adelanto')
       .eq('id', id)
       .single();
-    const total   = Number(campos.total   ?? actual?.total   ?? 0);
+
+    if (errActual) return { data: null, error: _err(errActual, `actualizar(${id}) saldo`) };
+
+    const total = Number(campos.total ?? actual?.total ?? 0);
     const adelanto = Number(campos.adelanto ?? actual?.adelanto ?? 0);
     campos.saldo = Math.max(0, total - adelanto);
   }
@@ -197,6 +210,26 @@ export const actualizar = async (id, cambios) => {
 
   if (error) return { data: null, error: _err(error, `actualizar(${id})`) };
   return { data, error: null };
+};
+
+/**
+ * Actualiza la cabecera de la reserva y reemplaza sus servicios.
+ * La eliminación previa queda acotada por `reserva_id`; la FK con cascade evita
+ * detalles huérfanos si la cabecera ya no existe.
+ * @param {number} id
+ * @param {object} campos
+ * @param {Array<{nombre, cantidad, precio_unitario, observaciones?}>} servicios
+ */
+export const actualizarReservaConServicios = async (id, campos, servicios = []) => {
+  const payload = _limpiarCabecera(campos, true);
+  const { data, error } = await supabase.rpc('fn_actualizar_reserva_con_servicios', {
+    p_reserva_id: id,
+    p_campos: payload,
+    p_servicios: _limpiarServiciosRpc(servicios),
+  });
+
+  if (error) return { data: null, error: _err(error, `actualizarReservaConServicios(${id})`) };
+  return getById(data.id);
 };
 
 /**
