@@ -92,14 +92,11 @@
       <div class="form-group"><label>Cargo / Puesto</label><input type="text" class="form-input" id="fCargo" placeholder="Ej: Planificador de eventos"/></div>
       <div class="form-group"><label>Teléfono</label><input type="text" class="form-input" id="fTelefono" placeholder="987 000 000"/></div>
     </div>
-    <div class="form-row">
-      <div class="form-group">
-        <label id="passLabel">Contraseña *</label>
-        <input type="password" class="form-input" id="fPassword" placeholder="Mínimo 8 caracteres"/>
-      </div>
-      <div class="form-group"><label>Rol</label><select class="form-select" id="fRol"><option>Administrador</option><option>Empleado</option></select></div>
-    </div>
+    <div class="form-group"><label>Rol</label><select class="form-select" id="fRol"><option>Administrador</option><option>Empleado</option></select></div>
     <div class="form-group"><label>Estado</label><select class="form-select" id="fEstado"><option>Activo</option><option>Inactivo</option></select></div>
+    <p id="notaCuenta" style="font-size:12.5px;color:var(--txt-muted);background:var(--bg-soft,#f5f3ee);border-radius:8px;padding:10px 12px;line-height:1.5">
+      Al crear un usuario nuevo se le envía una invitación a este correo para que defina su propia contraseña. No existe autorregistro: solo un administrador puede dar de alta cuentas.
+    </p>
     <div class="modal-footer">
       <button class="btn btn--outline" onclick="cerrarModal()">Cancelar</button>
       <button class="btn btn--primary" onclick="guardarUsuario()">Guardar Usuario</button>
@@ -181,8 +178,6 @@ function renderTabla() {
 function abrirModal() {
   editandoId = null;
   document.getElementById('modalTitulo').textContent = 'Nuevo Usuario';
-  document.getElementById('passLabel').textContent = 'Contraseña *';
-  document.getElementById('fPassword').placeholder = '••••••••';
   limpiarForm();
   document.getElementById('modalOverlay').classList.add('modal-overlay--open');
   setTimeout(() => document.getElementById('fNombre').focus(), 50);
@@ -191,16 +186,15 @@ function cerrarModal() { document.getElementById('modalOverlay').classList.remov
 document.getElementById('modalOverlay').addEventListener('click', e => { if (e.target.id==='modalOverlay') cerrarModal(); });
 
 function limpiarForm() {
-  ['fNombre','fUsername','fEmail','fPassword','fCargo','fTelefono'].forEach(id => document.getElementById(id).value='');
+  ['fNombre','fUsername','fEmail','fCargo','fTelefono'].forEach(id => document.getElementById(id).value='');
   document.getElementById('fRol').selectedIndex=0;
   document.getElementById('fEstado').selectedIndex=0;
 }
 
-function guardarUsuario() {
+async function guardarUsuario() {
   const nombre    = document.getElementById('fNombre').value.trim();
   const username  = document.getElementById('fUsername').value.trim();
   const email     = document.getElementById('fEmail').value.trim();
-  const password  = document.getElementById('fPassword').value;
   const cargo     = document.getElementById('fCargo').value.trim();
   const telefono  = document.getElementById('fTelefono').value.trim();
   const rol       = document.getElementById('fRol').value;
@@ -210,8 +204,6 @@ function guardarUsuario() {
   if (!username) { Toast.error('El usuario es obligatorio'); return; }
   if (!email)    { Toast.error('El email es obligatorio'); return; }
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { Toast.error('Email inválido'); return; }
-  if (editandoId === null && !password) { Toast.error('La contraseña es obligatoria'); return; }
-  if (password && password.length < 8) { Toast.error('La contraseña debe tener al menos 8 caracteres'); return; }
 
   const todos    = Data.usuarios.getAll();
   const dupUser  = todos.find(u => u.username === username && u.id !== editandoId);
@@ -219,16 +211,51 @@ function guardarUsuario() {
   if (dupUser)  { Toast.error('El nombre de usuario ya existe'); return; }
   if (dupEmail) { Toast.error('El email ya está registrado');    return; }
 
-  const data = { nombre, username, email, cargo, telefono, rol, estado };
-  if (password) data.passwordHash = btoa(password);
+  // 'Empleado' es vocabulario del registro local (Data.usuarios); el rol real
+  // de acceso en Supabase (perfiles.rol) solo admite Administrador/Planificador.
+  const rolSupabase = rol === 'Administrador' ? 'Administrador' : 'Planificador';
+  const { supabase } = await import('./js/supabaseClient.js');
+  const btn = document.querySelector('#modalOverlay .btn--primary');
+  const textoBtn = btn.textContent;
 
   if (editandoId !== null) {
-    Data.usuarios.update(editandoId, data);
+    const existente = Data.usuarios.find(editandoId);
+    Data.usuarios.update(editandoId, { nombre, username, email, cargo, telefono, rol, estado });
+
+    // Si esta cuenta local ya está vinculada a una cuenta real de Supabase,
+    // sincroniza rol/estado/datos — así "activar/desactivar" y cambiar rol
+    // desde aquí realmente afectan el acceso, no solo el registro local.
+    if (existente?.supabaseId) {
+      const { error } = await supabase.from('perfiles')
+        .update({ nombre, cargo, telefono, rol: rolSupabase, estado })
+        .eq('id', existente.supabaseId);
+      if (error) Toast.warning('Se guardó localmente, pero no se pudo sincronizar con Supabase: ' + error.message);
+    }
     Toast.success('Usuario actualizado ✓');
-  } else {
-    Data.usuarios.create(data);
-    Toast.success('Usuario creado ✓');
+    cerrarModal();
+    renderTabla();
+    return;
   }
+
+  // Alta nueva: invita la cuenta real vía Edge Function (requiere la
+  // service_role key, por eso no se puede hacer directo desde el navegador).
+  // El administrador no fija contraseña: el invitado la define al abrir el
+  // correo de invitación (ver login.html, modo "definir contraseña").
+  btn.disabled = true;
+  btn.textContent = 'Invitando...';
+  const { data: resultado, error } = await supabase.functions.invoke('invitar-planificador', {
+    body: { email, nombre, cargo, telefono, rol: rolSupabase, estado },
+  });
+  btn.disabled = false;
+  btn.textContent = textoBtn;
+
+  if (error) {
+    Toast.error('No se pudo invitar al usuario: ' + error.message);
+    return;
+  }
+
+  Data.usuarios.create({ nombre, username, email, cargo, telefono, rol, estado, supabaseId: resultado.id });
+  Toast.success('Invitación enviada ✓ — el usuario recibirá un correo para definir su contraseña');
   cerrarModal();
   renderTabla();
 }
@@ -238,12 +265,9 @@ function editarUsuario(id) {
   if (!u) return;
   editandoId = id;
   document.getElementById('modalTitulo').textContent = 'Editar Usuario';
-  document.getElementById('passLabel').textContent = 'Nueva contraseña (opcional)';
-  document.getElementById('fPassword').placeholder = 'Dejar en blanco para mantener';
   document.getElementById('fNombre').value    = u.nombre;
   document.getElementById('fUsername').value  = u.username;
   document.getElementById('fEmail').value     = u.email;
-  document.getElementById('fPassword').value  = '';
   document.getElementById('fCargo').value     = u.cargo    || '';
   document.getElementById('fTelefono').value  = u.telefono || '';
   document.getElementById('fRol').value       = u.rol;

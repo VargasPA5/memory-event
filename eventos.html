@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8"/>
@@ -142,13 +142,56 @@
 <script src="js/ui.js"></script>
 <script src="js/app.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script>
+<script type="module">
+import * as eventosService from './js/services/eventosService.js';
+import * as clientesService from './js/services/clientesService.js';
+import { storage } from './js/firebase.js';
+import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js';
+
 let editandoId = null;
+let todosLosEventos = [];
+let tiposEvento = [];
+let clientesDisponibles = [];
+let anexoEventoId = null;
+let anexosActuales = [];
+
+/* ── Exposición Global ──────────────────────────────────────────────── */
+window.renderTabla = renderTabla;
+window.exportarCSV = exportarCSV;
+window.abrirModal = abrirModal;
+window.cerrarModal = cerrarModal;
+window.guardarEvento = guardarEvento;
+window.editarEvento = editarEvento;
+window.pedirEliminar = pedirEliminar;
+window.abrirAnexos = abrirAnexos;
+window.cerrarAnexos = cerrarAnexos;
+
+/* ── Init & Carga ───────────────────────────────────────────────────── */
+async function inicializar() {
+  const resTipos = await eventosService.getTipos();
+  if (resTipos.data) tiposEvento = resTipos.data;
+  
+  const resClientes = await clientesService.getAll();
+  if (resClientes.data) clientesDisponibles = resClientes.data;
+
+  poblarTipos(document.getElementById('filtroTipo'), true);
+  await cargarEventos();
+}
+
+function poblarTipos(selectEl, incluyeTodos = false) {
+  selectEl.innerHTML = incluyeTodos ? '<option value="">Todos los tipos</option>' : '';
+  tiposEvento.forEach(t => {
+    const opt = document.createElement('option');
+    opt.value = t.id;
+    opt.textContent = t.nombre;
+    selectEl.appendChild(opt);
+  });
+}
 
 function poblarClientes() {
   const sel = document.getElementById('fCliente');
   sel.innerHTML = '';
-  Data.clientes.getAll().forEach(c => {
+  clientesDisponibles.forEach(c => {
     const opt = document.createElement('option');
     opt.value = c.id;
     opt.textContent = c.nombre;
@@ -156,36 +199,43 @@ function poblarClientes() {
   });
 }
 
+async function cargarEventos() {
+  const { data, error } = await eventosService.getAll();
+  if (error) { Toast.error('Error al cargar eventos'); return; }
+  todosLosEventos = data || [];
+  renderTabla();
+}
+
 function renderTabla() {
   const txt    = (document.getElementById('searchInput').value || '').toLowerCase();
-  const tipo   = document.getElementById('filtroTipo').value;
+  const tipoId = document.getElementById('filtroTipo').value;
   const estado = document.getElementById('filtroEstado').value;
   const tbody  = document.getElementById('tablaBody');
 
-  const todos = Data.eventos.getAll();
-  const filtrados = todos.filter(e =>
-    e.nombre.toLowerCase().includes(txt) &&
-    (!tipo   || e.tipo   === tipo) &&
-    (!estado || e.estado === estado)
-  );
+  const filtrados = todosLosEventos.filter(e => {
+    const matchTxt = e.nombre.toLowerCase().includes(txt);
+    const matchTipo = !tipoId || String(e.tipo_evento_id) === String(tipoId);
+    const matchEst = !estado || e.estado === estado;
+    return matchTxt && matchTipo && matchEst;
+  });
 
-  document.getElementById('kTotal').textContent      = todos.length;
-  document.getElementById('kConfirmados').textContent = todos.filter(e=>e.estado==='Confirmado').length;
-  document.getElementById('kPendientes').textContent  = todos.filter(e=>e.estado==='Pendiente').length;
-  document.getElementById('kCancelados').textContent  = todos.filter(e=>e.estado==='Cancelado').length;
-  document.getElementById('paginacionInfo').textContent = `Mostrando ${filtrados.length} de ${todos.length} eventos`;
+  document.getElementById('kTotal').textContent      = todosLosEventos.length;
+  document.getElementById('kConfirmados').textContent = todosLosEventos.filter(e=>e.estado==='Confirmado').length;
+  document.getElementById('kPendientes').textContent  = todosLosEventos.filter(e=>e.estado==='Pendiente').length;
+  document.getElementById('kCancelados').textContent  = todosLosEventos.filter(e=>e.estado==='Cancelado').length;
+  document.getElementById('paginacionInfo').textContent = `Mostrando ${filtrados.length} de ${todosLosEventos.length} eventos`;
 
   tbody.innerHTML = '';
   if (!filtrados.length) { tbody.innerHTML = emptyState('No se encontraron eventos.'); return; }
 
-  filtrados.sort((a,b) => new Date(a.fecha) - new Date(b.fecha)).forEach(ev => {
+  filtrados.forEach(ev => {
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td><div class="item-cell"><div class="avatar-ini" style="background:var(--indigo);border-radius:8px;font-size:11px"></div><div class="item-cell-info"><span class="item-cell-name ev-nombre"></span></div></div></td>
+      <td><div class="item-cell"><div class="avatar-ini" style="background:${ev.tipo?.color || 'var(--indigo)'};border-radius:8px;font-size:11px;color:#fff"></div><div class="item-cell-info"><span class="item-cell-name ev-nombre"></span></div></div></td>
       <td class="ev-cliente"></td>
-      <td>${badge(ev.tipo)}</td>
+      <td>${badge(ev.tipo?.nombre || '—')}</td>
       <td>${Fmt.dateShort(ev.fecha)}</td>
-      <td>${ev.hora || '—'}</td>
+      <td>${ev.hora ? ev.hora.substring(0,5) : '—'}</td>
       <td>${ev.invitados || '—'}</td>
       <td>${badge(ev.estado)}</td>
       <td><strong>${Fmt.currency(ev.presupuesto)}</strong></td>
@@ -202,36 +252,41 @@ function renderTabla() {
           </button>
         </div>
       </td>`;
-    tr.querySelector('.avatar-ini').textContent = ev.tipo.slice(0,2);
+    
+    tr.querySelector('.avatar-ini').textContent = (ev.tipo?.nombre || 'E').slice(0,2).toUpperCase();
     tr.querySelector('.ev-nombre').textContent = ev.nombre;
-    tr.querySelector('.ev-cliente').textContent = Data.clienteNombre(ev.clienteId);
+    tr.querySelector('.ev-cliente').textContent = ev.cliente?.nombre || '—';
     tbody.appendChild(tr);
   });
 }
 
+/* ── Modal & CRUD ───────────────────────────────────────────────────── */
 function abrirModal() {
   editandoId = null;
   document.getElementById('modalTitulo').textContent = 'Nuevo Evento';
   limpiarForm();
   poblarClientes();
+  poblarTipos(document.getElementById('fTipo'), false);
   document.getElementById('modalOverlay').classList.add('modal-overlay--open');
   setTimeout(() => document.getElementById('fNombre').focus(), 50);
 }
+
 function cerrarModal() {
   document.getElementById('modalOverlay').classList.remove('modal-overlay--open');
 }
+
 document.getElementById('modalOverlay').addEventListener('click', e => { if (e.target.id === 'modalOverlay') cerrarModal(); });
 
 function limpiarForm() {
   ['fNombre','fFecha','fHora','fInvitados','fPresupuesto','fLugar','fNotas'].forEach(id => document.getElementById(id).value = '');
-  document.getElementById('fTipo').selectedIndex = 0;
+  document.getElementById('fTipo').innerHTML = '';
   document.getElementById('fEstado').selectedIndex = 0;
 }
 
-function guardarEvento() {
+async function guardarEvento() {
   const nombre     = document.getElementById('fNombre').value.trim();
-  const tipo       = document.getElementById('fTipo').value;
-  const clienteId  = parseInt(document.getElementById('fCliente').value) || null;
+  const tipoId     = parseInt(document.getElementById('fTipo').value);
+  const clienteId  = parseInt(document.getElementById('fCliente').value);
   const fecha      = document.getElementById('fFecha').value;
   const hora       = document.getElementById('fHora').value;
   const invitados  = parseInt(document.getElementById('fInvitados').value) || 0;
@@ -242,6 +297,8 @@ function guardarEvento() {
 
   if (!nombre) { Toast.error('El nombre es obligatorio'); return; }
   if (!fecha)  { Toast.error('La fecha es obligatoria'); return; }
+  if (!clienteId) { Toast.error('El cliente es obligatorio'); return; }
+  if (!tipoId) { Toast.error('El tipo es obligatorio'); return; }
 
   const hoy = new Date().toISOString().split('T')[0];
   if (editandoId === null && fecha < hoy) {
@@ -249,28 +306,38 @@ function guardarEvento() {
     return;
   }
 
+  const payload = {
+    nombre, tipo_evento_id: tipoId, cliente_id: clienteId, fecha,
+    hora: hora || null, invitados, presupuesto, lugar, estado, notas
+  };
+
+  let res;
   if (editandoId !== null) {
-    Data.eventos.update(editandoId, { nombre, tipo, clienteId, fecha, hora, invitados, presupuesto, lugar, estado, notas });
-    Toast.success('Evento actualizado ✓');
+    res = await eventosService.actualizar(editandoId, payload);
   } else {
-    Data.eventos.create({ nombre, tipo, clienteId, fecha, hora, invitados, presupuesto, lugar, estado, notas });
-    Toast.success('Evento guardado ✓');
+    res = await eventosService.crear(payload);
   }
+
+  if (res.error) { Toast.error('Error al guardar: ' + res.error); return; }
+  
+  Toast.success(editandoId ? 'Evento actualizado ✓' : 'Evento guardado ✓');
   cerrarModal();
-  renderTabla();
+  await cargarEventos();
 }
 
 function editarEvento(id) {
-  const ev = Data.eventos.find(id);
+  const ev = todosLosEventos.find(x => x.id === id);
   if (!ev) return;
   editandoId = id;
   poblarClientes();
+  poblarTipos(document.getElementById('fTipo'), false);
+  
   document.getElementById('modalTitulo').textContent = 'Editar Evento';
   document.getElementById('fNombre').value     = ev.nombre;
-  document.getElementById('fTipo').value       = ev.tipo;
-  document.getElementById('fCliente').value    = ev.clienteId || '';
-  document.getElementById('fFecha').value      = ev.fecha || '';
-  document.getElementById('fHora').value       = ev.hora || '';
+  document.getElementById('fTipo').value       = ev.tipo_evento_id;
+  document.getElementById('fCliente').value    = ev.cliente_id;
+  document.getElementById('fFecha').value      = ev.fecha;
+  document.getElementById('fHora').value       = ev.hora ? ev.hora.substring(0,5) : '';
   document.getElementById('fInvitados').value  = ev.invitados || '';
   document.getElementById('fPresupuesto').value= ev.presupuesto || '';
   document.getElementById('fLugar').value      = ev.lugar || '';
@@ -280,21 +347,25 @@ function editarEvento(id) {
 }
 
 async function pedirEliminar(id) {
-  const dep = Data.depEvento(id);
+  const { data: dep, error } = await eventosService.getDependencias(id);
+  if (error) { Toast.error('Error al verificar dependencias'); return; }
   if (dep.reservas) {
     Toast.warning(`No se puede eliminar: tiene ${dep.reservas} reserva${dep.reservas>1?'s':''} asociadas`);
     return;
   }
   const ok = await Confirm({ title:'¿Eliminar evento?', message:'Esta acción no se puede deshacer.', okText:'Sí, eliminar' });
   if (!ok) return;
-  Data.eventos.delete(id);
-  renderTabla();
+  
+  const delRes = await eventosService.eliminar(id);
+  if (delRes.error) { Toast.error('Error al eliminar'); return; }
+  
   Toast.success('Evento eliminado');
+  await cargarEventos();
 }
 
 function exportarCSV() {
   const rows = [['ID','Nombre','Tipo','Cliente','Fecha','Hora','Invitados','Estado','Presupuesto']];
-  Data.eventos.getAll().forEach(e => rows.push([e.id, e.nombre, e.tipo, Data.clienteNombre(e.clienteId), e.fecha, e.hora||'', e.invitados||0, e.estado, e.presupuesto||0]));
+  todosLosEventos.forEach(e => rows.push([e.id, e.nombre, e.tipo?.nombre, e.cliente?.nombre, e.fecha, e.hora||'', e.invitados||0, e.estado, e.presupuesto||0]));
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.aoa_to_sheet(rows);
   XLSX.utils.book_append_sheet(wb, ws, 'Eventos');
@@ -302,129 +373,105 @@ function exportarCSV() {
   Toast.success('Excel exportado ✓');
 }
 
-renderTabla();
-</script>
+/* ── Anexos (Firebase + Supabase) ───────────────────────────────────── */
+const MAX_MB = 50;
 
-<script type="module">
-  import { storage } from './js/firebase.js';
-  import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js';
+async function cargarAnexos(eventoId) {
+  const { data, error } = await eventosService.getAnexos(eventoId);
+  if (error) { Toast.error('Error al cargar anexos'); return; }
+  anexosActuales = data || [];
+  renderAnexosDOM();
+}
 
-  const MAX_MB = 50;
-  let anexoEventoId = null;
+function renderAnexosDOM() {
+  const grid = document.getElementById('anexosGrid');
+  grid.innerHTML = '';
+  if (!anexosActuales.length) {
+    grid.innerHTML = '<p style="font-size:13px;color:var(--txt-muted);grid-column:1/-1;padding:8px 0">Sin anexos todavía.</p>';
+    return;
+  }
+  anexosActuales.forEach((a) => {
+    const cell = document.createElement('div');
+    cell.style.cssText = 'position:relative;border-radius:8px;overflow:hidden;border:1px solid var(--card-border);aspect-ratio:1/1;background:#0d0d0f';
+    const media = a.tipo === 'video'
+      ? `<video src="${a.url}" style="width:100%;height:100%;object-fit:cover" muted></video>`
+      : `<img src="${a.url}" alt="${escHtml(a.nombre_archivo || '')}" style="width:100%;height:100%;object-fit:cover"/>`;
+    cell.innerHTML = `${media}<button type="button" data-id="${a.id}" data-path="${a.storage_path||''}" class="anexo-del" title="Eliminar" style="position:absolute;top:4px;right:4px;background:rgba(0,0,0,.6);border:none;color:#fff;border-radius:6px;width:22px;height:22px;cursor:pointer;font-size:13px;line-height:1">✕</button>`;
+    grid.appendChild(cell);
+  });
+  grid.querySelectorAll('.anexo-del').forEach(btn => {
+    btn.addEventListener('click', () => eliminarAnexo(parseInt(btn.dataset.id), btn.dataset.path));
+  });
+}
 
-  function renderAnexos() {
-    const ev = Data.eventos.find(anexoEventoId);
-    const grid = document.getElementById('anexosGrid');
-    grid.innerHTML = '';
-    const anexos = ev?.anexos || [];
-    if (!anexos.length) {
-      grid.innerHTML = '<p style="font-size:13px;color:var(--txt-muted);grid-column:1/-1;padding:8px 0">Sin anexos todavía.</p>';
+async function abrirAnexos(id) {
+  anexoEventoId = id;
+  document.getElementById('anexosOverlay').classList.add('modal-overlay--open');
+  await cargarAnexos(id);
+}
+
+function cerrarAnexos() {
+  document.getElementById('anexosOverlay').classList.remove('modal-overlay--open');
+  document.getElementById('anexoFile').value = '';
+  document.getElementById('anexoProgress').style.display = 'none';
+}
+
+document.getElementById('anexoFile').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const esImagen = file.type.startsWith('image/');
+  const esVideo = file.type.startsWith('video/');
+  if (!esImagen && !esVideo) { Toast.error('Solo se permiten imágenes o videos'); e.target.value = ''; return; }
+  if (file.size > MAX_MB * 1024 * 1024) { Toast.error(`El archivo no debe superar ${MAX_MB}MB`); e.target.value = ''; return; }
+
+  const path = `anexos/${anexoEventoId}/${Date.now()}_${file.name}`;
+  const sref = ref(storage, path);
+  const tarea = uploadBytesResumable(sref, file);
+  const progEl = document.getElementById('anexoProgress');
+  const pctEl = document.getElementById('anexoPct');
+  progEl.style.display = 'block';
+
+  tarea.on('state_changed', snap => {
+    pctEl.textContent = Math.round((snap.bytesTransferred / snap.totalBytes) * 100) + '%';
+  }, () => {
+    Toast.error('Fallo al subir a Firebase');
+    progEl.style.display = 'none';
+    e.target.value = '';
+  }, async () => {
+    const url = await getDownloadURL(sref);
+    const { error } = await eventosService.agregarAnexo({
+      evento_id: anexoEventoId,
+      tipo: esVideo ? 'video' : 'imagen',
+      nombre_archivo: file.name,
+      storage_path: path,
+      url
+    });
+    progEl.style.display = 'none';
+    e.target.value = '';
+    if (error) {
+      Toast.error('Archivo subido pero error al guardar metadatos en BD');
       return;
     }
-    anexos.forEach((a, idx) => {
-      const cell = document.createElement('div');
-      cell.style.cssText = 'position:relative;border-radius:8px;overflow:hidden;border:1px solid var(--card-border);aspect-ratio:1/1;background:#0d0d0f';
-      const media = a.tipo === 'video'
-        ? `<video src="${a.url}" style="width:100%;height:100%;object-fit:cover" muted></video>`
-        : `<img src="${a.url}" alt="${escHtml(a.nombre || '')}" style="width:100%;height:100%;object-fit:cover"/>`;
-      cell.innerHTML = `${media}<button type="button" data-idx="${idx}" class="anexo-del" title="Eliminar" style="position:absolute;top:4px;right:4px;background:rgba(0,0,0,.6);border:none;color:#fff;border-radius:6px;width:22px;height:22px;cursor:pointer;font-size:13px;line-height:1">✕</button>`;
-      grid.appendChild(cell);
-    });
-    grid.querySelectorAll('.anexo-del').forEach(btn => {
-      btn.addEventListener('click', () => eliminarAnexo(parseInt(btn.dataset.idx)));
-    });
-  }
-
-  window.abrirAnexos = function (id) {
-    anexoEventoId = id;
-    renderAnexos();
-    document.getElementById('anexosOverlay').classList.add('modal-overlay--open');
-  };
-
-  window.cerrarAnexos = function () {
-    document.getElementById('anexosOverlay').classList.remove('modal-overlay--open');
-    document.getElementById('anexoFile').value = '';
-    document.getElementById('anexoProgress').style.display = 'none';
-  };
-
-  document.getElementById('anexosOverlay').addEventListener('click', e => { if (e.target.id === 'anexosOverlay') cerrarAnexos(); });
-
-  const leerComoDataURL = (file) => new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload  = () => resolve(reader.result);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
+    Toast.success('Anexo subido ✓');
+    await cargarAnexos(anexoEventoId);
   });
+});
 
-  const LOCAL_FALLBACK_MAX_MB = 4;
-  const guardarAnexoLocal = async (file, esVideo, progEl, pctEl, e) => {
-    if (file.size > LOCAL_FALLBACK_MAX_MB * 1024 * 1024) {
-      Toast.error(`No se pudo subir a Firebase Storage y el archivo es demasiado grande (>${LOCAL_FALLBACK_MAX_MB}MB) para guardarlo localmente`);
-      progEl.style.display = 'none';
-      e.target.value = '';
-      return;
-    }
-    try {
-      pctEl.textContent = '…';
-      const url = await leerComoDataURL(file);
-      const ev = Data.eventos.find(anexoEventoId);
-      const anexos = [...(ev.anexos || []), { url, path: null, tipo: esVideo ? 'video' : 'imagen', nombre: file.name, fecha: new Date().toISOString() }];
-      Data.eventos.update(anexoEventoId, { anexos });
-      progEl.style.display = 'none';
-      e.target.value = '';
-      renderAnexos();
-      Toast.success('Anexo guardado ✓');
-    } catch {
-      Toast.error('No se pudo guardar el anexo');
-      progEl.style.display = 'none';
-      e.target.value = '';
-    }
-  };
-
-  document.getElementById('anexoFile').addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const esImagen = file.type.startsWith('image/');
-    const esVideo = file.type.startsWith('video/');
-    if (!esImagen && !esVideo) { Toast.error('Solo se permiten imágenes o videos'); e.target.value = ''; return; }
-    if (file.size > MAX_MB * 1024 * 1024) { Toast.error(`El archivo no debe superar ${MAX_MB}MB`); e.target.value = ''; return; }
-
-    const path = `anexos/${anexoEventoId}/${Date.now()}_${file.name}`;
-    const sref = ref(storage, path);
-    const tarea = uploadBytesResumable(sref, file);
-    const progEl = document.getElementById('anexoProgress');
-    const pctEl = document.getElementById('anexoPct');
-    progEl.style.display = 'block';
-
-    tarea.on('state_changed', snap => {
-      pctEl.textContent = Math.round((snap.bytesTransferred / snap.totalBytes) * 100) + '%';
-    }, () => {
-      // Si Firebase Storage falla (reglas, cuota, conexión), se guarda localmente como respaldo
-      guardarAnexoLocal(file, esVideo, progEl, pctEl, e);
-    }, async () => {
-      const url = await getDownloadURL(sref);
-      const ev = Data.eventos.find(anexoEventoId);
-      const anexos = [...(ev.anexos || []), { url, path, tipo: esVideo ? 'video' : 'imagen', nombre: file.name, fecha: new Date().toISOString() }];
-      Data.eventos.update(anexoEventoId, { anexos });
-      progEl.style.display = 'none';
-      e.target.value = '';
-      renderAnexos();
-      Toast.success('Anexo subido ✓');
-    });
-  });
-
-  async function eliminarAnexo(idx) {
-    const ev = Data.eventos.find(anexoEventoId);
-    const anexo = ev?.anexos?.[idx];
-    if (!anexo) return;
-    const ok = await Confirm({ title: '¿Eliminar anexo?', message: 'Esta acción no se puede deshacer.', okText: 'Sí, eliminar' });
-    if (!ok) return;
-    try { await deleteObject(ref(storage, anexo.path)); } catch {}
-    const anexos = ev.anexos.filter((_, i) => i !== idx);
-    Data.eventos.update(anexoEventoId, { anexos });
-    renderAnexos();
-    Toast.success('Anexo eliminado');
+async function eliminarAnexo(id, storagePath) {
+  const ok = await Confirm({ title: '¿Eliminar anexo?', message: 'Esta acción no se puede deshacer.', okText: 'Sí, eliminar' });
+  if (!ok) return;
+  
+  if (storagePath) {
+    try { await deleteObject(ref(storage, storagePath)); } catch (err) { console.warn('No se pudo borrar de Firebase', err); }
   }
+  const { error } = await eventosService.eliminarAnexoBD(id);
+  if (error) { Toast.error('Error al eliminar de la base de datos'); return; }
+  Toast.success('Anexo eliminado');
+  await cargarAnexos(anexoEventoId);
+}
+
+/* ── Init ───────────────────────────────────────────────────────────── */
+inicializar();
 </script>
 </body>
 </html>

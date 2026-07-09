@@ -356,7 +356,13 @@ const initMobileNav = () => {
 /* ── Inicialización ─────────────────────────────────────────────────── */
 (() => {
   if (!Auth.require()) return; // Redirige a login.html si no hay sesión
-  Data.init();
+
+  // MIGRACIÓN: Data.init() desactivado — ya no se siembran datos demo en
+  // localStorage. Los módulos migrados leen desde Supabase via js/services/.
+  // Los módulos aún no migrados seguirán funcionando con sus datos locales
+  // existentes hasta que se migre cada página individualmente.
+  // Data.init(); // ← DESACTIVADO — ver js/services/ para la nueva capa de datos
+
   injectLayout();
   initSidebarToggle();
   initMobileNav();

@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8"/>
@@ -137,32 +137,55 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script src="js/boletas.js"></script>
-<script>
-let editandoId = null;
+<script type="module">
+import * as clientesService from './js/services/clientesService.js';
 
-/* ── Render ─────────────────────────────────────────────────────────── */
+let editandoId = null;
+let todosLosClientes = [];
+
+/* ── Exposición Global para HTML ────────────────────────────────────── */
+window.renderTabla = renderTabla;
+window.abrirModal = abrirModal;
+window.cerrarModal = cerrarModal;
+window.guardarCliente = guardarCliente;
+window.editarCliente = editarCliente;
+window.pedirEliminar = pedirEliminar;
+window.abrirBoletasCliente = abrirBoletasCliente;
+window.cerrarBoletasCliente = cerrarBoletasCliente;
+window.exportarCSV = exportarCSV;
+
+/* ── Render y Carga ─────────────────────────────────────────────────── */
+async function cargarClientes() {
+  indicarGuardando(true);
+  document.getElementById('storageStatus').textContent = 'Cargando...';
+  const { data, error } = await clientesService.getAll();
+  indicarGuardando(false);
+  if (error) { Toast.error('Error al cargar clientes'); return; }
+  todosLosClientes = data || [];
+  renderTabla();
+}
+
 function renderTabla() {
   const txt   = (document.getElementById('searchInput').value || '').toLowerCase();
   const tipo  = document.getElementById('filtroTipo').value;
   const tbody = document.getElementById('tablaBody');
 
-  const todos = Data.clientes.getAll();
-  const filtrados = todos.filter(c =>
-    (c.nombre.toLowerCase().includes(txt) || c.email.toLowerCase().includes(txt)) &&
+  const filtrados = todosLosClientes.filter(c =>
+    (c.nombre.toLowerCase().includes(txt) || (c.email && c.email.toLowerCase().includes(txt))) &&
     (!tipo || c.tipo === tipo)
   );
 
-  document.getElementById('kpiTotal').textContent    = todos.length;
-  document.getElementById('kpiPersonas').textContent = todos.filter(c=>c.tipo==='Persona').length;
-  document.getElementById('kpiEmpresas').textContent = todos.filter(c=>c.tipo==='Empresa').length;
-  document.getElementById('paginacionInfo').textContent = `Mostrando ${filtrados.length} de ${todos.length} clientes`;
+  document.getElementById('kpiTotal').textContent    = todosLosClientes.length;
+  document.getElementById('kpiPersonas').textContent = todosLosClientes.filter(c=>c.tipo==='Persona').length;
+  document.getElementById('kpiEmpresas').textContent = todosLosClientes.filter(c=>c.tipo==='Empresa').length;
+  document.getElementById('paginacionInfo').textContent = `Mostrando ${filtrados.length} de ${todosLosClientes.length} clientes`;
 
   tbody.innerHTML = '';
   if (!filtrados.length) { tbody.innerHTML = emptyState('No se encontraron clientes.'); return; }
 
   filtrados.forEach(c => {
     const tr = document.createElement('tr');
-    const fechaReg = c.createdAt ? Fmt.date(c.createdAt) : '—';
+    const fechaReg = c.created_at ? Fmt.date(c.created_at) : '—';
     tr.innerHTML = `
       <td><div class="client-cell">${avatarEl(c.nombre, c.id)}<span class="fw-600"></span></div></td>
       <td class="c-email"></td>
@@ -184,7 +207,7 @@ function renderTabla() {
         </div>
       </td>`;
     tr.querySelector('.fw-600').textContent = c.nombre;
-    tr.querySelector('.c-email').textContent = c.email;
+    tr.querySelector('.c-email').textContent = c.email || '—';
     tr.querySelector('.c-tel').textContent = c.telefono || '—';
     tr.querySelector('.c-dir').textContent = c.direccion || '—';
     tbody.appendChild(tr);
@@ -222,56 +245,72 @@ async function guardarCliente() {
   if (!email)  { Toast.error('El email es obligatorio'); return; }
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { Toast.error('Email inválido'); return; }
 
-  const dupEmail = Data.clientes.getAll().find(c => c.email === email && c.id !== editandoId);
+  const dupEmail = todosLosClientes.find(c => c.email === email && c.id !== editandoId);
   if (dupEmail) { Toast.error('Ya existe un cliente con ese email'); return; }
 
   indicarGuardando(true);
+  
+  let result;
   if (editandoId !== null) {
-    Data.clientes.update(editandoId, { nombre, email, tipo, telefono, fechaNacimiento: fecha, direccion });
-    Toast.success('Cliente actualizado ✓');
+    result = await clientesService.actualizar(editandoId, { nombre, email, tipo, telefono, fecha_nacimiento: fecha || null, direccion });
   } else {
-    Data.clientes.create({ nombre, email, tipo, telefono, fechaNacimiento: fecha, direccion });
-    Toast.success('Cliente guardado ✓');
+    result = await clientesService.crear({ nombre, email, tipo, telefono, fecha_nacimiento: fecha || null, direccion });
   }
-  indicarGuardando(false);
+
+  if (result.error) {
+    indicarGuardando(false);
+    Toast.error('Error al guardar cliente: ' + result.error);
+    return;
+  }
+
+  Toast.success(editandoId ? 'Cliente actualizado ✓' : 'Cliente guardado ✓');
   cerrarModal();
-  renderTabla();
+  await cargarClientes();
 }
 
 function editarCliente(id) {
-  const c = Data.clientes.find(id);
+  const c = todosLosClientes.find(x => x.id === id);
   if (!c) return;
   editandoId = id;
   document.getElementById('modalTitulo').textContent = 'Editar Cliente';
-  document.getElementById('fNombre').value    = c.nombre;
-  document.getElementById('fEmail').value     = c.email;
-  document.getElementById('fTipo').value      = c.tipo;
+  document.getElementById('fNombre').value    = c.nombre || '';
+  document.getElementById('fEmail').value     = c.email || '';
+  document.getElementById('fTipo').value      = c.tipo || 'Persona';
   document.getElementById('fTelefono').value  = c.telefono || '';
-  document.getElementById('fFecha').value     = c.fechaNacimiento || '';
+  document.getElementById('fFecha').value     = c.fecha_nacimiento || '';
   document.getElementById('fDireccion').value = c.direccion || '';
   document.getElementById('modalOverlay').classList.add('modal-overlay--open');
   setTimeout(() => document.getElementById('fNombre').focus(), 50);
 }
 
 async function pedirEliminar(id) {
-  const dep = Data.depCliente(id);
+  const { data: dep, error } = await clientesService.getDependencias(id);
+  if (error) { Toast.error('Error al verificar dependencias'); return; }
+  
   const partes = [];
   if (dep.eventos)  partes.push(`${dep.eventos} evento${dep.eventos>1?'s':''}`);
   if (dep.reservas) partes.push(`${dep.reservas} reserva${dep.reservas>1?'s':''}`);
-  if (dep.ingresos) partes.push(`${dep.ingresos} pago${dep.ingresos>1?'s':''}`);
+  
   if (partes.length) {
     Toast.warning(`No se puede eliminar: tiene ${partes.join(', ')} asociados`);
     return;
   }
   const ok = await Confirm({ title:'¿Eliminar cliente?', message:'Esta acción no se puede deshacer. El cliente será eliminado permanentemente.', okText:'Sí, eliminar' });
   if (!ok) return;
-  Data.clientes.delete(id);
-  renderTabla();
+  
+  indicarGuardando(true);
+  const delRes = await clientesService.eliminar(id);
+  indicarGuardando(false);
+  
+  if (delRes.error) { Toast.error('Error al eliminar o permisos insuficientes'); return; }
+  
   Toast.success('Cliente eliminado');
+  await cargarClientes();
 }
 
 /* ── Historial de boletas ──────────────────────────────────────────── */
 function abrirBoletasCliente(clienteId) {
+  // El módulo de boletas aún usa localStorage (data.js) y se mantiene para compatibilidad parcial.
   const boletas = Boletas.porCliente(clienteId);
   const list = document.getElementById('boletasClienteList');
   if (!boletas.length) {
@@ -308,9 +347,8 @@ document.getElementById('boletasClienteOverlay').addEventListener('click', e => 
 
 /* ── Excel export ───────────────────────────────────────────────────── */
 function exportarCSV() {
-  const clientes = Data.clientes.getAll();
   const rows = [['ID','Nombre','Email','Teléfono','Tipo','Dirección','Registrado']];
-  clientes.forEach(c => rows.push([c.id, c.nombre, c.email, c.telefono||'', c.tipo, c.direccion||'', c.createdAt?Fmt.date(c.createdAt):'']));
+  todosLosClientes.forEach(c => rows.push([c.id, c.nombre, c.email, c.telefono||'', c.tipo, c.direccion||'', c.created_at?Fmt.date(c.created_at):'']));
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.aoa_to_sheet(rows);
   XLSX.utils.book_append_sheet(wb, ws, 'Clientes');
@@ -327,7 +365,7 @@ function indicarGuardando(saving) {
 }
 
 /* ── Init ───────────────────────────────────────────────────────────── */
-renderTabla();
+cargarClientes();
 </script>
 </body>
 </html>

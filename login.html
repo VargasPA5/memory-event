@@ -290,7 +290,7 @@
         <input type="email" id="inputUser" class="form-input" placeholder="Ej: admin@eventos.com" autocomplete="username"/>
       </div>
       <div class="form-group">
-        <label for="inputPass">Contraseña</label>
+        <label for="inputPass" id="labelPass">Contraseña</label>
         <div class="input-wrap">
           <input type="password" id="inputPass" class="form-input" placeholder="••••••••" autocomplete="current-password"/>
           <button type="button" class="pwd-toggle" id="togglePwd" tabindex="-1">
@@ -299,13 +299,17 @@
           </button>
         </div>
       </div>
+      <div class="form-group" id="grupoConfirmar" style="display:none">
+        <label for="inputConfirmar">Confirmar contraseña</label>
+        <input type="password" id="inputConfirmar" class="form-input" placeholder="••••••••" autocomplete="new-password"/>
+      </div>
 
       <button class="btn-login" id="btnLogin">
         <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 3a1 1 0 011 1v12a1 1 0 11-2 0V4a1 1 0 011-1zm10.293 9.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L14.586 9H7a1 1 0 100 2h7.586l-1.293 1.293z" clip-rule="evenodd"/></svg>
         Iniciar sesión
       </button>
 
-      <div class="demo-box">
+      <div class="demo-box" id="demoBox">
         <div class="demo-title">Credenciales de prueba</div>
         <div class="demo-row">
           <span class="demo-badge demo-badge--admin">Administrador</span>
@@ -323,27 +327,20 @@
   </div>
 
 <script src="js/storage.js"></script>
+<script src="js/auth.js"></script>
 <script src="js/data.js"></script>
 <script>
   AppLogo.paintInto('.left-brand-icon, .mobile-brand-icon');
   AppLogo.onChange(() => AppLogo.paintInto('.left-brand-icon, .mobile-brand-icon'));
 </script>
 <script type="module">
-  import { auth } from './js/firebase.js';
-  import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+  import { supabase } from './js/supabaseClient.js';
 
-  /* Redirigir si ya hay sesión activa */
-  try { if (JSON.parse(sessionStorage.getItem('ep:session'))) window.location.replace('dashboard.html'); } catch {}
-
-  Data.init();
-
-  /* ── Mostrar error ────────────────────────────────────────────────── */
+  /* ── Mostrar / limpiar error ──────────────────────────────────────── */
   function showError(msg) {
     const el = document.getElementById('loginError');
     document.getElementById('loginErrorMsg').textContent = msg;
     el.classList.add('show');
-    document.getElementById('inputUser').classList.toggle('error', msg.includes('correo'));
-    document.getElementById('inputPass').classList.toggle('error', msg.includes('contraseña') || msg.includes('Contraseña'));
   }
   function clearError() {
     document.getElementById('loginError').classList.remove('show');
@@ -351,40 +348,7 @@
     document.getElementById('inputPass').classList.remove('error');
   }
 
-  /* ── Resuelve el perfil local (rol, nombre, etc.) asociado al correo ── */
-  function buscarPerfil(email) {
-    const users = Storage.get('ep:usuarios', []);
-    return users.find(u => u.email === email && u.estado === 'Activo') || null;
-  }
-
-  function iniciarSesionLocal(perfil) {
-    const safe = { id:perfil.id, nombre:perfil.nombre, username:perfil.username, email:perfil.email, rol:perfil.rol, avatar:perfil.avatar||'', telefono:perfil.telefono||'', cargo:perfil.cargo||'' };
-    sessionStorage.setItem('ep:session', JSON.stringify(safe));
-  }
-
-  /* Si Firebase aún no tiene la cuenta pero existe un perfil local con la misma
-     contraseña (ej. cuentas semilla o creadas por el admin), se provisiona en
-     Firebase de forma transparente en el primer inicio de sesión. */
-  async function autoProvisionar(email, password) {
-    const perfil = buscarPerfil(email);
-    if (!perfil || perfil.passwordHash !== btoa(password)) return null;
-    try {
-      await createUserWithEmailAndPassword(auth, email, password);
-      return perfil;
-    } catch {
-      return null;
-    }
-  }
-
-  function mapearError(code) {
-    switch (code) {
-      case 'auth/invalid-email': return 'Correo electrónico inválido';
-      case 'auth/too-many-requests': return 'Demasiados intentos. Intenta más tarde';
-      default: return 'Correo o contraseña incorrectos';
-    }
-  }
-
-  /* ── Login ────────────────────────────────────────────────────────── */
+  /* ── Login normal ─────────────────────────────────────────────────── */
   async function doLogin() {
     clearError();
     const email    = document.getElementById('inputUser').value.trim();
@@ -395,34 +359,16 @@
     if (!password) { showError('Ingresa tu contraseña'); return; }
 
     btn.disabled = true;
+    const textoOriginal = btn.innerHTML;
     btn.innerHTML = '<svg viewBox="0 0 20 20" fill="currentColor" style="animation:spin .8s linear infinite"><path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd"/></svg> Verificando...';
 
-    const restaurarBoton = () => {
+    const resultado = await Auth.login(email, password);
+    if (!resultado.ok) {
+      showError(resultado.error);
       btn.disabled = false;
-      btn.innerHTML = '<svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 3a1 1 0 011 1v12a1 1 0 11-2 0V4a1 1 0 011-1zm10.293 9.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L14.586 9H7a1 1 0 100 2h7.586l-1.293 1.293z" clip-rule="evenodd"/></svg> Iniciar sesión';
-    };
-
-    try {
-      await signInWithEmailAndPassword(auth, email, password);
-    } catch (err) {
-      const reintentable = ['auth/user-not-found', 'auth/invalid-credential', 'auth/invalid-login-credentials'].includes(err.code);
-      const perfilProvisionado = reintentable ? await autoProvisionar(email, password) : null;
-      if (!perfilProvisionado) {
-        showError(mapearError(err.code));
-        document.getElementById('inputPass').value = '';
-        restaurarBoton();
-        return;
-      }
-    }
-
-    const perfil = buscarPerfil(email);
-    if (!perfil) {
-      showError('Tu cuenta no está registrada en el sistema. Contacta al administrador.');
-      restaurarBoton();
+      btn.innerHTML = textoOriginal;
       return;
     }
-
-    iniciarSesionLocal(perfil);
     window.location.replace('dashboard.html');
   }
 
@@ -443,10 +389,60 @@
     document.getElementById('eyeOff').style.display  = isText ? 'none' : '';
   });
 
-  /* ── Enter key ────────────────────────────────────────────────────── */
-  document.getElementById('inputUser').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('inputPass').focus(); });
-  document.getElementById('inputPass').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
-  document.getElementById('btnLogin').addEventListener('click', doLogin);
+  /* ── Modo "definir contraseña" (llega desde el correo de invitación de un
+     administrador — ver Edge Function invitar-planificador). Ya no hay
+     autorregistro: la única forma de obtener cuenta es que un admin invite
+     al correo desde usuarios.html. ──────────────────────────────────── */
+  async function activarModoInvitacion() {
+    document.querySelector('.card-title').textContent = 'Define tu contraseña';
+    document.querySelector('.card-sub').textContent = 'Elige la contraseña con la que ingresarás al sistema';
+    document.querySelector('.form-group').style.display = 'none'; // oculta el campo de correo
+    document.getElementById('labelPass').textContent = 'Nueva contraseña';
+    document.getElementById('inputPass').placeholder = 'Mínimo 6 caracteres';
+    document.getElementById('grupoConfirmar').style.display = '';
+    document.getElementById('demoBox').style.display = 'none';
+    document.getElementById('btnLogin').lastChild.textContent = ' Guardar y entrar';
+    document.getElementById('btnLogin').onclick = null;
+    document.getElementById('btnLogin').addEventListener('click', doDefinirPassword);
+  }
+
+  async function doDefinirPassword() {
+    clearError();
+    const pass  = document.getElementById('inputPass').value;
+    const conf  = document.getElementById('inputConfirmar').value;
+    if (!pass || pass.length < 6) { showError('La contraseña debe tener al menos 6 caracteres'); return; }
+    if (pass !== conf) { showError('Las contraseñas no coinciden'); return; }
+
+    const { error } = await supabase.auth.updateUser({ password: pass });
+    if (error) { showError(error.message); return; }
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      // El correo de invitación ya autenticó al usuario; ahora que definió
+      // su contraseña, se arma la sesión local igual que en un login normal.
+      const { data: perfil } = await supabase.from('perfiles').select('*').eq('id', user.id).single();
+      if (perfil) Auth.set(perfil, user.email);
+    }
+    window.location.replace('dashboard.html');
+  }
+
+  /* ── Inicialización ───────────────────────────────────────────────── */
+  (async () => {
+    // El enlace de invitación llega con un token en el hash de la URL; el
+    // cliente de Supabase (detectSessionInUrl) lo procesa al iniciar.
+    const esInvitacion = location.hash.includes('access_token');
+    if (esInvitacion) {
+      await activarModoInvitacion();
+      return;
+    }
+
+    if (Auth.get()) { window.location.replace('dashboard.html'); return; }
+
+    Data.init();
+    document.getElementById('inputUser').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('inputPass').focus(); });
+    document.getElementById('inputPass').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+    document.getElementById('btnLogin').addEventListener('click', doLogin);
+  })();
 </script>
 </body>
 </html>

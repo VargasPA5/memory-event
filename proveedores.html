@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8"/>
@@ -117,8 +117,26 @@
 <script src="js/ui.js"></script>
 <script src="js/app.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script>
+<script type="module">
+import * as proveedoresService from './js/services/proveedoresService.js';
+
 let editandoId = null;
+let todosLosProveedores = [];
+
+window.renderTabla = renderTabla;
+window.exportarCSV = exportarCSV;
+window.abrirModal = abrirModal;
+window.cerrarModal = cerrarModal;
+window.guardarProveedor = guardarProveedor;
+window.editarProveedor = editarProveedor;
+window.pedirEliminar = pedirEliminar;
+
+async function cargarProveedores() {
+  const { data, error } = await proveedoresService.getAll();
+  if (error) { Toast.error('Error al cargar proveedores'); return; }
+  todosLosProveedores = data || [];
+  renderTabla();
+}
 
 function renderTabla() {
   const txt    = (document.getElementById('searchInput').value||'').toLowerCase();
@@ -126,19 +144,18 @@ function renderTabla() {
   const estado = document.getElementById('filtroEstado').value;
   const tbody  = document.getElementById('tablaBody');
 
-  const todos = Data.proveedores.getAll();
-  const filtrados = todos.filter(p =>
+  const filtrados = todosLosProveedores.filter(p =>
     (p.nombre.toLowerCase().includes(txt) || (p.contacto||'').toLowerCase().includes(txt)) &&
     (!tipo   || p.tipo   === tipo) &&
     (!estado || p.estado === estado)
   );
 
-  const tiposUnicos = new Set(todos.map(p=>p.tipo)).size;
-  document.getElementById('kTotal').textContent    = todos.length;
-  document.getElementById('kActivos').textContent  = todos.filter(p=>p.estado==='Activo').length;
-  document.getElementById('kInactivos').textContent= todos.filter(p=>p.estado==='Inactivo').length;
+  const tiposUnicos = new Set(todosLosProveedores.map(p=>p.tipo)).size;
+  document.getElementById('kTotal').textContent    = todosLosProveedores.length;
+  document.getElementById('kActivos').textContent  = todosLosProveedores.filter(p=>p.estado==='Activo').length;
+  document.getElementById('kInactivos').textContent= todosLosProveedores.filter(p=>p.estado==='Inactivo').length;
   document.getElementById('kTipos').textContent    = tiposUnicos;
-  document.getElementById('paginacionInfo').textContent = `Mostrando ${filtrados.length} de ${todos.length} proveedores`;
+  document.getElementById('paginacionInfo').textContent = `Mostrando ${filtrados.length} de ${todosLosProveedores.length} proveedores`;
 
   tbody.innerHTML = '';
   if (!filtrados.length) { tbody.innerHTML = emptyState('No se encontraron proveedores.'); return; }
@@ -152,7 +169,7 @@ function renderTabla() {
       <td class="p-email"></td>
       <td>${badge(p.tipo)}</td>
       <td>${badge(p.estado)}</td>
-      <td>${Fmt.date(p.createdAt)}</td>
+      <td>${Fmt.date(p.created_at)}</td>
       <td>
         <div class="actions">
           <button class="action-btn" title="Editar" onclick="editarProveedor(${p.id})">
@@ -187,7 +204,7 @@ function limpiarForm() {
   document.getElementById('fEstado').selectedIndex=0;
 }
 
-function guardarProveedor() {
+async function guardarProveedor() {
   const nombre   = document.getElementById('fNombre').value.trim();
   const tipo     = document.getElementById('fTipo').value;
   const contacto = document.getElementById('fContacto').value.trim();
@@ -198,22 +215,27 @@ function guardarProveedor() {
   if (!nombre) { Toast.error('El nombre es obligatorio'); return; }
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { Toast.error('El email del proveedor no es válido'); return; }
 
-  const dupNombre = Data.proveedores.getAll().find(p => p.nombre.toLowerCase() === nombre.toLowerCase() && p.id !== editandoId);
+  const dupNombre = todosLosProveedores.find(p => p.nombre.toLowerCase() === nombre.toLowerCase() && p.id !== editandoId);
   if (dupNombre) { Toast.error('Ya existe un proveedor con ese nombre'); return; }
 
+  const payload = { nombre, tipo, contacto, telefono, email, estado };
+
+  let res;
   if (editandoId !== null) {
-    Data.proveedores.update(editandoId, { nombre, tipo, contacto, telefono, email, estado });
-    Toast.success('Proveedor actualizado ✓');
+    res = await proveedoresService.actualizar(editandoId, payload);
   } else {
-    Data.proveedores.create({ nombre, tipo, contacto, telefono, email, estado });
-    Toast.success('Proveedor guardado ✓');
+    res = await proveedoresService.crear(payload);
   }
+
+  if (res.error) { Toast.error('Error al guardar: ' + res.error); return; }
+
+  Toast.success(editandoId ? 'Proveedor actualizado ✓' : 'Proveedor guardado ✓');
   cerrarModal();
-  renderTabla();
+  await cargarProveedores();
 }
 
 function editarProveedor(id) {
-  const p = Data.proveedores.find(id);
+  const p = todosLosProveedores.find(x => x.id === id);
   if (!p) return;
   editandoId = id;
   document.getElementById('modalTitulo').textContent = 'Editar Proveedor';
@@ -229,14 +251,17 @@ function editarProveedor(id) {
 async function pedirEliminar(id) {
   const ok = await Confirm({ title:'¿Eliminar proveedor?', message:'Esta acción no se puede deshacer.', okText:'Sí, eliminar' });
   if (!ok) return;
-  Data.proveedores.delete(id);
-  renderTabla();
+  
+  const res = await proveedoresService.eliminar(id);
+  if (res.error) { Toast.error('Error al eliminar (¿Dependencias?)'); return; }
+  
   Toast.success('Proveedor eliminado');
+  await cargarProveedores();
 }
 
 function exportarCSV() {
   const rows = [['ID','Nombre','Tipo','Contacto','Teléfono','Email','Estado']];
-  Data.proveedores.getAll().forEach(p => rows.push([p.id, p.nombre, p.tipo, p.contacto||'', p.telefono||'', p.email||'', p.estado]));
+  todosLosProveedores.forEach(p => rows.push([p.id, p.nombre, p.tipo, p.contacto||'', p.telefono||'', p.email||'', p.estado]));
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.aoa_to_sheet(rows);
   XLSX.utils.book_append_sheet(wb, ws, 'Proveedores');
@@ -244,7 +269,7 @@ function exportarCSV() {
   Toast.success('Excel exportado ✓');
 }
 
-renderTabla();
+cargarProveedores();
 </script>
 </body>
 </html>

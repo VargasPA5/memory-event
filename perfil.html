@@ -275,7 +275,7 @@ function cargarPerfil() {
   document.getElementById('iCreado').textContent = full.createdAt ? Fmt.date(full.createdAt) : '—';
 }
 
-function guardarPerfil() {
+async function guardarPerfil() {
   const u = Auth.get();
   if (!u) return;
 
@@ -292,13 +292,19 @@ function guardarPerfil() {
   const dup = Data.usuarios.getAll().find(x => x.email === email && x.id !== u.id);
   if (dup) { Toast.error('Ese email ya está en uso por otro usuario'); return; }
 
+  // Registro local (nombre/cargo/email/telefono de exhibición — capa de datos
+  // aún no migrada). El email de acceso real vive en Supabase Auth y no se
+  // toca aquí: cambiarlo implica su propio flujo de verificación, fuera del
+  // alcance de la Fase 4.
   Data.usuarios.update(u.id, { nombre, cargo, email, telefono });
-  Auth.refresh(); // Actualiza la sesión con los nuevos datos
+  // Mantiene sincronizada la tabla `perfiles`, que es de donde Auth.get()
+  // lee nombre/cargo/telefono para pintar sidebar, topbar y esta misma vista.
+  await Auth.updatePerfil({ nombre, cargo, telefono });
   Toast.success('Perfil actualizado ✓');
   cargarPerfil();
 }
 
-function cambiarPassword() {
+async function cambiarPassword() {
   const u = Auth.get();
   if (!u) return;
 
@@ -308,18 +314,27 @@ function cambiarPassword() {
 
   if (!curPwd) { Toast.error('Ingresa tu contraseña actual'); return; }
   if (!newPwd) { Toast.error('Ingresa la nueva contraseña'); return; }
-
-  // Verificar contraseña actual
-  const full = Data.usuarios.find(u.id);
-  if (!full || full.passwordHash !== btoa(curPwd)) {
-    Toast.error('La contraseña actual es incorrecta');
-    return;
-  }
   if (newPwd.length < 8) { Toast.error('La nueva contraseña debe tener al menos 8 caracteres'); return; }
   if (newPwd !== confPwd) { Toast.error('Las contraseñas no coinciden'); return; }
   if (curPwd === newPwd) { Toast.warning('La nueva contraseña debe ser diferente a la actual'); return; }
 
-  Data.usuarios.update(u.id, { passwordHash: btoa(newPwd) });
+  const { supabase } = await import('./js/supabaseClient.js');
+
+  // Verifica la contraseña actual re-autenticando contra Supabase antes de
+  // permitir el cambio (mismo criterio de seguridad que tenía la versión
+  // anterior, solo que ahora contra Supabase Auth en vez de un hash local).
+  const { error: errVerificacion } = await supabase.auth.signInWithPassword({ email: u.email, password: curPwd });
+  if (errVerificacion) {
+    Toast.error('La contraseña actual es incorrecta');
+    return;
+  }
+
+  const { error: errCambio } = await supabase.auth.updateUser({ password: newPwd });
+  if (errCambio) {
+    Toast.error('No se pudo actualizar la contraseña: ' + errCambio.message);
+    return;
+  }
+
   document.getElementById('fCurPwd').value  = '';
   document.getElementById('fNewPwd').value  = '';
   document.getElementById('fConfPwd').value = '';
