@@ -55,7 +55,6 @@ const _limpiarCabecera = (campos = {}, parcial = false) => {
 
 const _limpiarServicio = (servicio, reservaId) => ({
   reserva_id: reservaId,
-  servicio_id: servicio.servicio_id ?? null,
   nombre: servicio.nombre,
   cantidad: Number.parseInt(servicio.cantidad, 10) || 1,
   precio_unitario: Number(servicio.precio_unitario ?? servicio.precio ?? 0),
