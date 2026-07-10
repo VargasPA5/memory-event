@@ -391,10 +391,12 @@ img { display: block; max-width: 100%; }
 .topbar__notif:hover { background: var(--main-bg); }
 .topbar__public-home {
   height: 36px;
+  width: 36px;
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  padding: 0 13px;
+  padding: 0;
+  justify-content: center;
   border: 1px solid var(--card-border);
   border-radius: var(--radius);
   background: var(--card-bg);
@@ -1920,8 +1922,6 @@ body::selection { background: rgba(201,163,90,.24); color: var(--txt-primary); }
 @media (max-width: 480px) {
   .page-wrapper { padding: 16px 12px 28px; }
   .btn, .btn-export, .filter-select { min-height: 40px; }
-  .topbar__public-home { width: 36px; padding: 0; justify-content: center; }
-  .topbar__public-home span { display: none; }
   .modal-header, .modal-footer { padding-left: 18px; padding-right: 18px; }
   .modal > .form-row,
   .modal > .form-row-3,
