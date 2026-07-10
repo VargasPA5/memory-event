@@ -245,17 +245,22 @@
 <div id="toast-container"></div>
 <script src="js/storage.js"></script>
 <script src="js/auth.js"></script>
-<script src="js/data.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/app.js"></script>
-<script>
-const AVATAR_COLORS_P = ['#c9a35a','#10b981','#f59e0b','#3b82f6','#ec4899','#8b5cf6','#14b8a6','#f97316'];
+<script type="module">
+import { getPerfilActual, actualizarPerfil } from './js/services/perfilesService.js';
 
-function cargarPerfil() {
+const AVATAR_COLORS_P = ['#c9a35a','#10b981','#f59e0b','#3b82f6','#ec4899','#8b5cf6','#14b8a6','#f97316'];
+let perfilActual = null;
+
+async function cargarPerfil() {
+  const { data, error } = await getPerfilActual();
+  if (error) { Toast.error(error); return; }
+  perfilActual = data;
+  Auth.set(data, data.email);
   const u = Auth.get();
   if (!u) return;
 
-  // Hero (la foto/avatar la maneja el módulo de subida más abajo)
   window.renderAvatar?.(u.avatar || '', u.nombre, u.id);
   document.getElementById('heroNombre').textContent  = u.nombre;
   document.getElementById('heroRolBadge').innerHTML  = badge(u.rol);
@@ -266,13 +271,12 @@ function cargarPerfil() {
   document.getElementById('fCargo').value    = u.cargo    || '';
   document.getElementById('fEmail').value    = u.email    || '';
   document.getElementById('fTelefono').value = u.telefono || '';
+  document.getElementById('fEmail').readOnly = true;
 
-  // Sidebar info (from full user record)
-  const full = Data.usuarios.find(u.id) || u;
   document.getElementById('iUsername').textContent = u.username;
   document.getElementById('iRol').innerHTML  = badge(u.rol);
-  document.getElementById('iEstado').innerHTML = badge(full.estado || 'Activo');
-  document.getElementById('iCreado').textContent = full.createdAt ? Fmt.date(full.createdAt) : '—';
+  document.getElementById('iEstado').innerHTML = badge(data.estado || 'Activo');
+  document.getElementById('iCreado').textContent = data.createdAt ? Fmt.date(data.createdAt) : '—';
 }
 
 async function guardarPerfil() {
@@ -285,23 +289,17 @@ async function guardarPerfil() {
   const telefono = document.getElementById('fTelefono').value.trim();
 
   if (!nombre) { Toast.error('El nombre es obligatorio'); return; }
-  if (!email)  { Toast.error('El email es obligatorio'); return; }
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { Toast.error('Email inválido'); return; }
+  if (email !== (perfilActual?.email || u.email)) {
+    Toast.warning('El correo de acceso se administra desde Supabase Auth y no se cambia desde esta pantalla.');
+    document.getElementById('fEmail').value = perfilActual?.email || u.email || '';
+    return;
+  }
 
-  // Verificar email duplicado (excluyendo el propio usuario)
-  const dup = Data.usuarios.getAll().find(x => x.email === email && x.id !== u.id);
-  if (dup) { Toast.error('Ese email ya está en uso por otro usuario'); return; }
-
-  // Registro local (nombre/cargo/email/telefono de exhibición — capa de datos
-  // aún no migrada). El email de acceso real vive en Supabase Auth y no se
-  // toca aquí: cambiarlo implica su propio flujo de verificación, fuera del
-  // alcance de la Fase 4.
-  Data.usuarios.update(u.id, { nombre, cargo, email, telefono });
-  // Mantiene sincronizada la tabla `perfiles`, que es de donde Auth.get()
-  // lee nombre/cargo/telefono para pintar sidebar, topbar y esta misma vista.
-  await Auth.updatePerfil({ nombre, cargo, telefono });
+  const { error } = await actualizarPerfil({ nombre, cargo, telefono });
+  if (error) { Toast.error(error); return; }
+  await Auth.refresh();
   Toast.success('Perfil actualizado ✓');
-  cargarPerfil();
+  await cargarPerfil();
 }
 
 async function cambiarPassword() {
@@ -357,17 +355,21 @@ function evaluarFuerza(pwd) {
   bar.style.background = color;
 }
 
+window.guardarPerfil = guardarPerfil;
+window.cambiarPassword = cambiarPassword;
+window.evaluarFuerza = evaluarFuerza;
 cargarPerfil();
 </script>
 
 <script type="module">
-  import { auth, storage } from './js/firebase.js';
-  import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+  import { storage } from './js/firebase.js';
+  import { actualizarPerfil } from './js/services/perfilesService.js';
   import { ref, uploadBytesResumable, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js';
 
   const MAX_MB = 5;
   const R = 15.5;
   const CIRC = 2 * Math.PI * R;
+  const AVATAR_COLORS_PROFILE = ['#c9a35a','#10b981','#f59e0b','#3b82f6','#ec4899','#8b5cf6','#14b8a6','#f97316'];
 
   const els = {
     file:      document.getElementById('avatarFile'),
@@ -404,7 +406,7 @@ cargarPerfil();
       const ini = String(nombre||'U').split(' ').map(p=>p[0]).join('').slice(0,2).toUpperCase();
       els.heroAvatar.innerHTML = '';
       els.heroAvatar.textContent = ini;
-      els.heroAvatar.style.background = AVATAR_COLORS_P[(id||0) % AVATAR_COLORS_P.length];
+      els.heroAvatar.style.background = AVATAR_COLORS_PROFILE[String(id || '').length % AVATAR_COLORS_PROFILE.length];
     }
     els.removeBtn.hidden = !url;
   };
@@ -418,20 +420,6 @@ cargarPerfil();
     if (topbar) topbar.innerHTML = buildTopbarHTML();
     initSidebarToggle(); initMobileNav(); initThemeToggle();
   };
-
-  /* Firebase Auth puede tardar en restaurar la sesión persistida desde
-     IndexedDB; esperamos el primer evento antes de decidir qué uid usar
-     en la ruta de Storage (ver fix equivalente en js/data.js). */
-  const authReady = new Promise(resolve => {
-    const unsub = onAuthStateChanged(auth, user => { unsub(); resolve(user); });
-  });
-
-  const leerComoDataURL = (file) => new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload  = () => resolve(reader.result);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
 
   els.file.addEventListener('change', async (e) => {
     const file = e.target.files[0];
@@ -450,9 +438,7 @@ cargarPerfil();
     showOverlay(true);
 
     try {
-      const fbUser = await authReady;
-      const uid  = fbUser?.uid || `local_${u.id}`;
-      const path = `avatars/${uid}/${Date.now()}_${file.name}`;
+      const path = `avatars/${u.id}/${Date.now()}_${file.name}`;
       const sref = ref(storage, path);
       const task = uploadBytesResumable(sref, file);
 
@@ -464,24 +450,17 @@ cargarPerfil();
         );
       });
 
-      Data.usuarios.update(u.id, { avatar: url });
-      Auth.refresh();
-      renderAvatar(url, u.nombre, u.id);
+      const { error } = await actualizarPerfil({ avatar_url: url });
+      if (error) throw new Error(error);
+      await Auth.refresh();
+      const actualizado = Auth.get();
+      renderAvatar(url, actualizado?.nombre || u.nombre, actualizado?.id || u.id);
       refreshShellAvatars();
       Toast.success('Foto de perfil actualizada ✓');
     } catch (err) {
-      console.warn('No se pudo subir la foto a Firebase Storage, se guarda solo localmente', err);
-      try {
-        const dataUrl = await leerComoDataURL(file);
-        Data.usuarios.update(u.id, { avatar: dataUrl });
-        Auth.refresh();
-        renderAvatar(dataUrl, u.nombre, u.id);
-        refreshShellAvatars();
-        Toast.warning('No se pudo conectar con el servidor; la foto se guardó solo en este dispositivo');
-      } catch {
-        renderAvatar(previousAvatar, u.nombre, u.id);
-        Toast.error('No se pudo procesar la imagen. Intenta con otro archivo.');
-      }
+      console.warn('No se pudo subir o guardar la foto de perfil', err);
+      renderAvatar(previousAvatar, u.nombre, u.id);
+      Toast.error('No se pudo actualizar la foto. Intenta nuevamente.');
     } finally {
       uploading = false;
       showOverlay(false);
@@ -495,8 +474,9 @@ cargarPerfil();
     if (!u || uploading) return;
     const ok = await Confirm({ title: 'Quitar foto de perfil', message: 'Tu avatar volverá a mostrar tus iniciales.', okText: 'Quitar', type: 'warning' });
     if (!ok) return;
-    Data.usuarios.update(u.id, { avatar: '' });
-    Auth.refresh();
+    const { error } = await actualizarPerfil({ avatar_url: '' });
+    if (error) { Toast.error(error); return; }
+    await Auth.refresh();
     renderAvatar('', u.nombre, u.id);
     refreshShellAvatars();
     Toast.success('Foto de perfil eliminada');

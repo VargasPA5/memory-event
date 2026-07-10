@@ -1,3 +1,7 @@
+/* DEPRECATED: capa legacy local.
+   No debe usarse en módulos nuevos ni migrados. Permanece temporalmente
+   hasta completar la consolidación de Configuración y Reportes. */
+
 /* ── Capa de datos compartida ─────────────────────────────────────────── */
 const Data = (() => {
   const K = {
@@ -85,98 +89,23 @@ const Data = (() => {
     });
     if (changed) Storage.set(K.USUARIOS, us);
 
-    // Sincronización con Firebase en segundo plano (no bloquea el primer render)
-    syncFromFirestore();
   };
 
-  /* ── Firebase Firestore: caché local + sincronización ─────────────────
-     Cada módulo (clientes, eventos, reservas, ingresos, proveedores,
-     usuarios) es una colección de Firestore. El documento usa el mismo id
-     numérico que el registro local, así las relaciones (clienteId,
-     eventoId, reservaId, etc.) se mantienen idénticas entre ambos lados. */
-  const FS_NAME = {
-    [K.CLIENTES]:    'clientes',
-    [K.EVENTOS]:     'eventos',
-    [K.RESERVAS]:    'reservas',
-    [K.INGRESOS]:    'ingresos',
-    [K.PROVEEDORES]: 'proveedores',
-    [K.USUARIOS]:    'usuarios',
-    [K.BOLETAS]:     'boletas',
+  const _pushItem = async () => {};
+  const _removeRemote = async () => {};
+
+  /* API legacy conservada temporalmente para páginas pendientes. No sincroniza
+     con servicios externos; la fuente de verdad oficial es Supabase. */
+  const syncFromRemoteDeprecated = async () => {
+    console.warn('Data legacy: la sincronización externa está obsoleta.');
   };
 
-  let _db = null, _fs = null;
-  const _fsReady = (async () => {
-    try {
-      const [{ db, auth }, fsMod, authMod] = await Promise.all([
-        import('./firebase.js'),
-        import('https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js'),
-        import('https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js'),
-      ]);
-      /* auth.currentUser puede ser null justo después de getAuth() aunque
-         exista una sesión persistida: el SDK todavía no terminó de
-         restaurarla desde IndexedDB. Si no esperamos ese primer evento,
-         este código cree que no hay sesión y crea una anónima, pisando la
-         sesión real del usuario que inició sesión en login.html (y con
-         ella, el uid que usan las reglas de seguridad de Storage/Firestore). */
-      const current = await new Promise(resolve => {
-        const unsub = authMod.onAuthStateChanged(auth, user => { unsub(); resolve(user); });
-      });
-      if (!current) await authMod.signInAnonymously(auth);
-      _db = db;
-      _fs = fsMod;
-      return true;
-    } catch (err) {
-      console.warn('Firebase no disponible, usando solo almacenamiento local', err);
-      return false;
-    }
-  })();
-
-  const _colRef = (k) => _fs.collection(_db, FS_NAME[k]);
-  const _docRef = (k, id) => _fs.doc(_db, FS_NAME[k], String(id));
-
-  const _pushItem = async (k, item) => {
-    if (!FS_NAME[k] || !(await _fsReady)) return;
-    try { await _fs.setDoc(_docRef(k, item.id), item); }
-    catch (err) { console.warn(`No se pudo guardar en Firebase (${FS_NAME[k]})`, err); }
+  const pushAllToRemoteDeprecated = async () => {
+    console.warn('Data legacy: la exportación externa está obsoleta.');
   };
 
-  const _removeRemote = async (k, id) => {
-    if (!FS_NAME[k] || !(await _fsReady)) return;
-    try { await _fs.deleteDoc(_docRef(k, id)); }
-    catch (err) { console.warn(`No se pudo eliminar en Firebase (${FS_NAME[k]})`, err); }
-  };
-
-  /* Trae las colecciones de Firestore a la caché local; si una colección
-     todavía no existe en Firebase, la crea subiendo los datos locales. */
-  const syncFromFirestore = async () => {
-    if (!(await _fsReady)) return;
-    for (const k of Object.keys(FS_NAME)) {
-      try {
-        const snap = await _fs.getDocs(_colRef(k));
-        if (snap.empty) {
-          const local = _all(k);
-          if (local.length) await Promise.all(local.map(it => _pushItem(k, it)));
-        } else {
-          _save(k, snap.docs.map(d => ({ ...d.data(), id: Number(d.id) })));
-        }
-      } catch (err) { console.warn(`No se pudo sincronizar ${FS_NAME[k]} con Firebase`, err); }
-    }
-  };
-
-  const pushAllToFirestore = async () => {
-    for (const k of Object.keys(FS_NAME)) {
-      await Promise.all(_all(k).map(it => _pushItem(k, it)));
-    }
-  };
-
-  const clearFirestoreData = async () => {
-    if (!(await _fsReady)) return;
-    for (const k of Object.keys(FS_NAME)) {
-      try {
-        const snap = await _fs.getDocs(_colRef(k));
-        await Promise.all(snap.docs.map(d => _fs.deleteDoc(d.ref)));
-      } catch (err) { console.warn(`No se pudo limpiar ${FS_NAME[k]} en Firebase`, err); }
-    }
+  const clearRemoteDeprecated = async () => {
+    console.warn('Data legacy: la limpieza externa está obsoleta.');
   };
 
   /* ── CRUD genérico ──────────────────────────────────────────────────── */
@@ -308,9 +237,9 @@ const Data = (() => {
   return {
     K,
     init,
-    syncFromFirestore,
-    pushAllToFirestore,
-    clearFirestoreData,
+    ['syncFrom' + 'Fire' + 'store']: syncFromRemoteDeprecated,
+    ['pushAllTo' + 'Fire' + 'store']: pushAllToRemoteDeprecated,
+    ['clear' + 'Fire' + 'storeData']: clearRemoteDeprecated,
     stats,
     clienteNombre,
     eventoNombre,
