@@ -846,7 +846,7 @@ img { display: block; max-width: 100%; }
 .confirm-icon-wrap--danger { background: var(--red-bg); color: var(--red); }
 .confirm-icon-wrap--warning { background: var(--yellow-bg); color: var(--yellow); }
 .confirm-title { font-size: 17px; font-weight: 700; margin-bottom: 8px; }
-.confirm-desc { font-size: 13.5px; color: var(--txt-secondary); margin-bottom: 22px; }
+.confirm-desc { font-size: 13.5px; color: var(--txt-secondary); margin-bottom: 22px; white-space: pre-line; }
 .confirm-actions { display: flex; gap: 10px; justify-content: center; }
 
 /* ===== TOAST ================================================================ */

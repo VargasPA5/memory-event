@@ -250,10 +250,11 @@ async function guardarUsuario() {
     return;
   }
 
-  // Alta nueva: invita la cuenta real vía Edge Function (requiere la
+  // Alta nueva: crea la cuenta real vía Edge Function (requiere la
   // service_role key, por eso no se puede hacer directo desde el navegador).
-  // El administrador no fija contraseña: el invitado la define al abrir el
-  // correo de invitación (ver login.html, modo "definir contraseña").
+  // No se envía ningún correo: la función genera una contraseña temporal y
+  // la devuelve aquí para que el administrador se la pase al planificador
+  // por fuera del sistema. El planificador la cambia luego desde Mi Perfil.
   btn.disabled = true;
   btn.textContent = 'Invitando...';
   // Se pasa el token de sesión explícito: supabase.functions.invoke() lo
@@ -289,9 +290,18 @@ async function guardarUsuario() {
     return;
   }
 
-  Toast.success('Invitación enviada ✓ — el usuario recibirá un correo para definir su contraseña');
   cerrarModal();
   await cargarUsuarios();
+  Toast.success('Usuario creado ✓');
+  // Modal bloqueante (no un toast que desaparece solo): la contraseña
+  // temporal solo se muestra esta vez, hay que copiarla ahora.
+  await Confirm({
+    type: 'warning',
+    title: 'Contraseña temporal generada',
+    message: `Correo: ${email}\nContraseña temporal: ${resultado.passwordTemporal}\n\nCompártela con el planificador por fuera del sistema. Podrá cambiarla luego desde "Mi Perfil".`,
+    okText: 'Ya la copié',
+    cancelText: 'Cerrar',
+  });
 }
 
 function editarUsuario(id) {

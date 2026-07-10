@@ -8,15 +8,15 @@
 // antes de usarla.
 //
 // Flujo: el admin llama a esta función (desde usuarios.html) con el email
-// del nuevo planificador → se le envía un correo de invitación → al abrirlo
-// llega autenticado a login.html, donde define su propia contraseña.
+// del nuevo planificador → se crea la cuenta con una contraseña temporal
+// (no se envía ningún correo: ni el mailer de Supabase Auth ni un proveedor
+// externo, ambos añaden límites/dependencias que no valen la pena aquí) →
+// el admin le pasa esa contraseña al planificador por fuera del sistema →
+// el planificador entra con ella y la cambia desde Mi Perfil (perfil.html,
+// que ya tiene su propio formulario de "Cambiar contraseña").
 // fn_handle_new_user (trigger ya existente en la base de datos) crea la fila
 // en `perfiles` automáticamente; esta función solo la ajusta después
 // (rol/estado/cargo/teléfono) según lo que pidió el administrador.
-//
-// El correo de invitación NO lo manda Supabase Auth (su mailer integrado
-// tiene un límite muy bajo en el plan gratuito): se genera el link con
-// generateLink (no envía nada) y se manda por Resend en su lugar.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -25,6 +25,13 @@ const CORS_HEADERS = {
   "Access-Control-Allow-Headers": "authorization, content-type, x-client-info, apikey",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
+
+function generarPasswordTemporal(): string {
+  const chars = "ABCDEFGHJKMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789";
+  let pass = "";
+  for (let i = 0; i < 10; i++) pass += chars[Math.floor(Math.random() * chars.length)];
+  return pass;
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS_HEADERS });
@@ -39,7 +46,6 @@ Deno.serve(async (req) => {
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
     const SERVICE_ROLE_KEY = Deno.env.get("SERVICE_ROLE_KEY")!;
-    const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY")!;
 
     const authHeader = req.headers.get("Authorization") || "";
     if (!authHeader) return jsonError("No autenticado", 401);
@@ -70,49 +76,17 @@ Deno.serve(async (req) => {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
-    // generateLink crea el usuario y el link de invitación pero NO envía
-    // ningún correo (a diferencia de inviteUserByEmail).
-    const { data: invited, error: inviteErr } = await admin.auth.admin.generateLink({
-      type: "invite",
+    const passwordTemporal = generarPasswordTemporal();
+
+    // email_confirm:true evita el correo de confirmación de Supabase Auth
+    // (no hay proveedor de correo configurado en este proyecto).
+    const { data: creado, error: crearErr } = await admin.auth.admin.createUser({
       email,
-      options: {
-        data: { nombre: body.nombre || "" },
-        // Adónde apunta el link una vez que Supabase autentica al usuario.
-        redirectTo: "https://vargaspa5.github.io/memory-event/login.html",
-      },
+      password: passwordTemporal,
+      email_confirm: true,
+      user_metadata: { nombre: body.nombre || "" },
     });
-    if (inviteErr) return jsonError(inviteErr.message, 400);
-
-    const actionLink = invited.properties?.action_link;
-
-    // El correo sí lo manda Resend (el mailer integrado de Supabase Auth
-    // tiene un límite muy bajo en el plan gratuito).
-    const resendRes = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${RESEND_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        // Remitente de pruebas de Resend: no requiere verificar dominio,
-        // pero solo entrega al correo con el que te registraste en Resend.
-        // Para invitar a cualquier persona hay que verificar un dominio
-        // propio en Resend y cambiar este remitente.
-        from: "Memory <onboarding@resend.dev>",
-        to: email,
-        subject: "Invitación a Memory — define tu contraseña",
-        html: `
-          <p>Hola${body.nombre ? " " + body.nombre : ""},</p>
-          <p>Un administrador te invitó a unirte a Memory como planificador.</p>
-          <p><a href="${actionLink}">Haz clic aquí para definir tu contraseña</a></p>
-          <p>Si no esperabas este correo, puedes ignorarlo.</p>
-        `,
-      }),
-    });
-    if (!resendRes.ok) {
-      const detalle = await resendRes.text();
-      return jsonError(`No se pudo enviar el correo de invitación: ${detalle}`, 502);
-    }
+    if (crearErr) return jsonError(crearErr.message, 400);
 
     // fn_handle_new_user ya creó la fila en `perfiles` (rol Planificador,
     // estado Activo por defecto); se ajusta según lo pedido en el formulario.
@@ -124,10 +98,10 @@ Deno.serve(async (req) => {
     if (body.estado)   cambios.estado = body.estado; // 'Activo' | 'Inactivo'
 
     if (Object.keys(cambios).length > 0) {
-      await admin.from("perfiles").update(cambios).eq("id", invited.user.id);
+      await admin.from("perfiles").update(cambios).eq("id", creado.user.id);
     }
 
-    return new Response(JSON.stringify({ ok: true, id: invited.user.id }), {
+    return new Response(JSON.stringify({ ok: true, id: creado.user.id, passwordTemporal }), {
       headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
     });
   } catch (err) {
