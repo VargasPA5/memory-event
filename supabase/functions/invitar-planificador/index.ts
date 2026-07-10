@@ -67,6 +67,9 @@ Deno.serve(async (req) => {
 
     const { data: invited, error: inviteErr } = await admin.auth.admin.inviteUserByEmail(email, {
       data: { nombre: body.nombre || "" },
+      // Sin esto, Supabase redirige al Site URL configurado en el dashboard
+      // (por defecto localhost) en vez de a la app publicada.
+      redirectTo: "https://vargaspa5.github.io/memory-event/login.html",
     });
     if (inviteErr) return jsonError(inviteErr.message, 400);
 
