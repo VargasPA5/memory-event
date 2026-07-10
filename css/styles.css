@@ -787,7 +787,12 @@ img { display: block; max-width: 100%; }
 .badge--teal   { background: var(--teal-bg);   color: var(--teal-txt); }
 
 /* ===== FORMS ================================================================ */
-.form-group { display: flex; flex-direction: column; gap: 5px; }
+/* min-width:0 es necesario porque .form-group vive como celda de un grid
+   (.form-row: 1fr 1fr) — sin esto, un hijo con contenido ancho (una tabla
+   con varias columnas, como en el catálogo de proveedor) se niega a
+   encogerse y empuja la otra columna fuera del modal en vez de ajustarse
+   al espacio disponible. */
+.form-group { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
 .form-group label {
   font-size: 12.5px;
   font-weight: 600;
