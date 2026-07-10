@@ -158,7 +158,7 @@ export const getDependencias = async (id) => {
 };
 
 /**
- * Busca clientes por nombre o email (búsqueda parcial, case-insensitive).
+ * Busca clientes por nombre, email o teléfono (búsqueda parcial, case-insensitive).
  * @param {string} query
  */
 export const buscar = async (query) => {
@@ -167,7 +167,7 @@ export const buscar = async (query) => {
   const { data, error } = await supabase
     .from('clientes')
     .select('id, nombre, tipo, email, telefono')
-    .or(`nombre.ilike.%${query}%,email.ilike.%${query}%`)
+    .or(`nombre.ilike.%${query}%,email.ilike.%${query}%,telefono.ilike.%${query}%`)
     .limit(20);
 
   if (error) return { data: null, error: _err(error, `buscar("${query}")`) };

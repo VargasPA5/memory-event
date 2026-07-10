@@ -88,8 +88,18 @@
       <button class="modal-close" onclick="cerrarModal()">✕</button>
     </div>
     <div class="form-row">
-      <div class="form-group"><label>Cliente</label><select class="form-select" id="fCliente"></select></div>
-      <div class="form-group"><label>Evento</label><select class="form-select" id="fEvento" onchange="onEventoChange()"></select></div>
+      <div class="form-group">
+        <label>Cliente</label>
+        <input type="text" class="form-input" id="fClienteBuscar" list="clientesReservaOptions" placeholder="Buscar cliente para filtrar eventos"/>
+        <input type="hidden" id="fCliente"/>
+        <datalist id="clientesReservaOptions"></datalist>
+      </div>
+      <div class="form-group">
+        <label>Evento</label>
+        <input type="text" class="form-input" id="fEventoBuscar" list="eventosReservaOptions" placeholder="Buscar evento por nombre, cliente o fecha"/>
+        <input type="hidden" id="fEvento"/>
+        <datalist id="eventosReservaOptions"></datalist>
+      </div>
     </div>
     <div class="form-row">
       <div class="form-group"><label>Fecha</label><input type="date" class="form-input" id="fFecha"/></div>
@@ -134,6 +144,7 @@ let editandoId = null;
 let todasLasReservas = [];
 let eventosDisponibles = [];
 let clientesDisponibles = [];
+let clienteSearchTimer = null;
 
 const PRESET_SERVICIOS = ['Alquiler del local','Comida / Catering','Decoración','Arreglos florales','DJ','Fotografía','Video','Animación','Seguridad','Limpieza','Otros'];
 
@@ -252,26 +263,87 @@ function recolectarServicios() {
   return resultado;
 }
 
-function poblarSelects() {
-  const selCl = document.getElementById('fCliente');
-  const selEv = document.getElementById('fEvento');
-  selCl.innerHTML = '<option value="">— Seleccionar —</option>';
-  selEv.innerHTML = '<option value="">— Seleccionar —</option>';
-  selCl.disabled = true;
+const clienteLabel = (c) => [c.nombre, c.email, c.telefono].filter(Boolean).join(' · ');
+const eventoLabel = (e) => [e.nombre, e.cliente?.nombre, e.fecha].filter(Boolean).join(' · ');
+
+function poblarClientesReserva() {
+  const list = document.getElementById('clientesReservaOptions');
+  list.innerHTML = '';
   clientesDisponibles.forEach(c => {
-    const o = document.createElement('option'); o.value = c.id; o.textContent = c.nombre; selCl.appendChild(o);
-  });
-  eventosDisponibles.forEach(e => {
-    const o = document.createElement('option'); o.value = e.id; o.textContent = e.nombre; selEv.appendChild(o);
+    const o = document.createElement('option');
+    o.value = clienteLabel(c);
+    o.dataset.id = c.id;
+    list.appendChild(o);
   });
 }
 
+function poblarEventosReserva(clienteId = '') {
+  const list = document.getElementById('eventosReservaOptions');
+  list.innerHTML = '';
+  eventosDisponibles
+    .filter(e => !clienteId || Number(e.cliente_id) === Number(clienteId))
+    .forEach(e => {
+      const o = document.createElement('option');
+      o.value = eventoLabel(e);
+      o.dataset.id = e.id;
+      list.appendChild(o);
+    });
+}
+
+function poblarSelects() {
+  poblarClientesReserva();
+  poblarEventosReserva(document.getElementById('fCliente').value);
+}
+
+function resolverClienteReserva() {
+  const input = document.getElementById('fClienteBuscar');
+  const hidden = document.getElementById('fCliente');
+  const texto = input.value.trim().toLowerCase();
+  const cliente = clientesDisponibles.find(c => clienteLabel(c).toLowerCase() === texto || String(c.id) === hidden.value);
+  hidden.value = cliente?.id || '';
+  poblarEventosReserva(hidden.value);
+  return cliente || null;
+}
+
+async function buscarClientesReserva() {
+  const input = document.getElementById('fClienteBuscar');
+  const hidden = document.getElementById('fCliente');
+  hidden.value = '';
+
+  const query = input.value.trim();
+  if (query.length < 2) {
+    clientesDisponibles = [];
+    poblarClientesReserva();
+    poblarEventosReserva();
+    return;
+  }
+
+  const { data, error } = await clientesService.buscar(query);
+  if (error) {
+    Toast.error('No se pudo buscar clientes');
+    return;
+  }
+
+  clientesDisponibles = data || [];
+  poblarClientesReserva();
+  resolverClienteReserva();
+}
+
+function resolverEventoReserva() {
+  const input = document.getElementById('fEventoBuscar');
+  const hidden = document.getElementById('fEvento');
+  const texto = input.value.trim().toLowerCase();
+  const evento = eventosDisponibles.find(e => eventoLabel(e).toLowerCase() === texto || String(e.id) === hidden.value);
+  hidden.value = evento?.id || '';
+  return evento || null;
+}
+
 function onEventoChange() {
-  const evId = parseInt(document.getElementById('fEvento').value);
-  const ev = eventosDisponibles.find(x => Number(x.id) === evId);
+  const ev = resolverEventoReserva();
   if (ev) {
     document.getElementById('fFecha').value = ev.fecha || '';
     document.getElementById('fCliente').value = ev.cliente_id || '';
+    document.getElementById('fClienteBuscar').value = ev.cliente ? clienteLabel(ev.cliente) : '';
     if (ev.presupuesto) document.getElementById('fTotal').value = ev.presupuesto;
     calcularSaldo();
   }
@@ -336,6 +408,7 @@ function abrirModal() {
   editandoId = null;
   document.getElementById('modalTitulo').textContent = 'Nueva Reserva';
   limpiarForm();
+  clientesDisponibles = [];
   poblarSelects();
   document.getElementById('modalOverlay').classList.add('modal-overlay--open');
 }
@@ -344,12 +417,13 @@ document.getElementById('modalOverlay').addEventListener('click', e => { if (e.t
 
 function limpiarForm() {
   ['fFecha','fTotal','fAdelanto','fSaldo','fNotas'].forEach(id => document.getElementById(id).value='');
+  ['fCliente','fEvento','fClienteBuscar','fEventoBuscar'].forEach(id => document.getElementById(id).value='');
   document.getElementById('fEstado').selectedIndex=0;
   renderServicios([]);
 }
 
 async function guardarReserva() {
-  const eventoId  = parseInt(document.getElementById('fEvento').value)||null;
+  const eventoId  = Number(document.getElementById('fEvento').value || resolverEventoReserva()?.id || 0) || null;
   const fecha     = document.getElementById('fFecha').value;
   const estado    = document.getElementById('fEstado').value;
   const total     = parseFloat(document.getElementById('fTotal').value)||0;
@@ -382,10 +456,14 @@ async function editarReserva(id) {
   if (error) { Toast.error('Error al cargar reserva'); return; }
   if (!r) return;
   editandoId = id;
+  clientesDisponibles = r.cliente ? [r.cliente] : [];
   poblarSelects();
   document.getElementById('modalTitulo').textContent = 'Editar Reserva';
   document.getElementById('fCliente').value  = r.cliente_id || '';
   document.getElementById('fEvento').value   = r.evento_id  || '';
+  document.getElementById('fClienteBuscar').value = r.cliente ? clienteLabel(r.cliente) : '';
+  document.getElementById('fEventoBuscar').value = r.evento ? eventoLabel({ ...r.evento, cliente: r.cliente }) : '';
+  poblarEventosReserva(r.cliente_id || '');
   document.getElementById('fFecha').value    = r.fecha || '';
   document.getElementById('fEstado').value   = r.estado;
   document.getElementById('fTotal').value    = r.total || '';
@@ -429,20 +507,22 @@ async function cargarReservas() {
 }
 
 async function inicializar() {
-  const [resEventos, resClientes] = await Promise.all([
-    eventosService.getAll(),
-    clientesService.getAll()
-  ]);
+  const resEventos = await eventosService.getAll();
 
   if (resEventos.error) Toast.error('Error al cargar eventos disponibles');
-  if (resClientes.error) Toast.error('Error al cargar clientes');
 
   eventosDisponibles = resEventos.data || [];
-  clientesDisponibles = resClientes.data || [];
   await cargarReservas();
 }
 
 sessionReady.then(inicializar);
+document.getElementById('fClienteBuscar').addEventListener('input', () => {
+  clearTimeout(clienteSearchTimer);
+  clienteSearchTimer = setTimeout(buscarClientesReserva, 250);
+  document.getElementById('fEvento').value = '';
+  document.getElementById('fEventoBuscar').value = '';
+});
+document.getElementById('fEventoBuscar').addEventListener('input', onEventoChange);
 </script>
 </body>
 </html>

@@ -20,7 +20,7 @@ const rpc = async (fn, args = {}) => {
 
 const nullableNumber = (value) => value === '' || value == null ? null : Number(value);
 const nullableText = (value) => value === '' || value == null ? null : value;
-const nullableBool = (value) => value === '' || value == null ? null : Boolean(value);
+const activeBool = (value) => value === true ? true : null;
 const positiveNumber = (value, fallback = 0) => {
   const n = Number(value);
   return Number.isFinite(n) && n >= 0 ? n : fallback;
@@ -69,14 +69,14 @@ export const getEventos = async ({ desde, hasta, filtros = {} }) => {
     p_cliente_id: nullableNumber(filtros.clienteId),
     p_proveedor_id: nullableNumber(filtros.proveedorId),
     p_planificador_id: nullableText(filtros.planificadorId),
-    p_pagos_pendientes: nullableBool(filtros.pagosPendientes),
-    p_saldo_pendiente: nullableBool(filtros.saldoPendiente),
-    p_sin_proveedor: nullableBool(filtros.sinProveedor),
-    p_sin_reserva: nullableBool(filtros.sinReserva),
-    p_checklist_incompleto: nullableBool(filtros.checklistIncompleto),
-    p_con_anexos: nullableBool(filtros.conAnexos),
-    p_con_comentarios: nullableBool(filtros.conComentarios),
-    p_con_agenda: nullableBool(filtros.conAgenda),
+    p_pagos_pendientes: activeBool(filtros.pagosPendientes),
+    p_saldo_pendiente: activeBool(filtros.saldoPendiente),
+    p_sin_proveedor: activeBool(filtros.sinProveedor),
+    p_sin_reserva: activeBool(filtros.sinReserva),
+    p_checklist_incompleto: activeBool(filtros.checklistIncompleto),
+    p_con_anexos: activeBool(filtros.conAnexos),
+    p_con_comentarios: activeBool(filtros.conComentarios),
+    p_con_agenda: activeBool(filtros.conAgenda),
   });
 
   if (res.error) return res;
