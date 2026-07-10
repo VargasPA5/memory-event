@@ -125,7 +125,7 @@ img { display: block; max-width: 100%; }
   display: flex;
   flex-direction: column;
   height: 100%;
-  overflow-y: auto;
+  overflow: hidden;
   overflow-x: hidden;
   /* Sin esto, el scroll táctil dentro de un contenedor position:fixed no
      responde de forma confiable en iOS/Safari — el menú "no hace scroll"
@@ -142,8 +142,22 @@ img { display: block; max-width: 100%; }
      "Cerrar sesión" incluido) fuera del área que realmente se puede
      desplazar. */
   min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(201,163,90,.46) transparent;
 }
-.sidebar__inner::-webkit-scrollbar { width: 0; }
+.sidebar__nav::-webkit-scrollbar { width: 8px; }
+.sidebar__nav::-webkit-scrollbar-track { background: transparent; }
+.sidebar__nav::-webkit-scrollbar-thumb {
+  background: rgba(201,163,90,.36);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+.sidebar__nav::-webkit-scrollbar-thumb:hover { background: rgba(201,163,90,.58); background-clip: padding-box; }
 
 /* Brand */
 .sidebar__header {
@@ -154,6 +168,7 @@ img { display: block; max-width: 100%; }
   border-bottom: 1px solid var(--sb-border);
   gap: 8px;
   transition: justify-content var(--t-slow), padding var(--t-slow);
+  flex-shrink: 0;
 }
 .sidebar.collapsed .sidebar__header { justify-content: center; padding: 18px 8px 14px; }
 .sidebar__brand {
@@ -196,7 +211,7 @@ img { display: block; max-width: 100%; }
 
 /* Nav */
 .sidebar__nav {
-  flex: 1;
+  flex: 1 1 auto;
   padding: 10px 8px;
   display: flex;
   flex-direction: column;
@@ -209,8 +224,9 @@ img { display: block; max-width: 100%; }
   letter-spacing: .1em;
   padding: 14px 10px 4px;
   white-space: nowrap;
-  overflow: hidden;
+  overflow: visible;
   transition: opacity var(--t);
+  flex-shrink: 0;
 }
 .sidebar.collapsed .nav-section-label { opacity: 0; }
 
@@ -225,8 +241,9 @@ img { display: block; max-width: 100%; }
   font-weight: 500;
   transition: background var(--t), color var(--t), justify-content var(--t-slow);
   white-space: nowrap;
-  overflow: hidden;
+  overflow: visible;
   position: relative;
+  flex-shrink: 0;
 }
 .sidebar.collapsed .nav-item { justify-content: center; padding: 10px 0; overflow: visible; }
 .nav-item:hover { background: var(--sb-item-hover); color: var(--sb-text-hover); }
@@ -243,7 +260,7 @@ img { display: block; max-width: 100%; }
 }
 .nav-item:hover .nav-icon,
 .nav-item.active .nav-icon { opacity: 1; }
-.nav-label { opacity: 1; transition: opacity .12s ease; }
+.nav-label { opacity: 1; transition: opacity .12s ease; overflow: visible; text-overflow: clip; }
 .sidebar.collapsed .nav-label { opacity: 0; width: 0; overflow: hidden; }
 
 .nav-item--logout { color: rgba(255,255,255,.35); }
@@ -284,6 +301,7 @@ img { display: block; max-width: 100%; }
   display: flex;
   flex-direction: column;
   gap: 4px;
+  flex-shrink: 0;
 }
 .sidebar-user {
   display: flex;
