@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Memory — Deja tu reseña</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Dancing+Script:wght@700&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', sans-serif;
+      min-height: 100vh;
+      display: flex; align-items: center; justify-content: center;
+      background: #f0efec;
+      padding: 24px;
+    }
+    .rs-card {
+      background: #fff;
+      border-radius: 20px;
+      padding: 40px 36px;
+      width: 100%;
+      max-width: 460px;
+      box-shadow: 0 4px 6px -1px rgba(20,18,14,.05), 0 16px 48px -4px rgba(20,18,14,.1);
+      border: 1px solid #e5e1da;
+      text-align: center;
+    }
+    .rs-brand { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 24px; }
+    .rs-brand-icon {
+      width: 40px; height: 40px; border-radius: 50%;
+      background: linear-gradient(135deg, #d9b978, #9e7528);
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 2px 10px rgba(201,163,90,.35);
+    }
+    .rs-brand-name { font-size: 22px; font-weight: 700; font-family: 'Dancing Script', cursive; color: #1a1917; }
+    .rs-title { font-size: 20px; font-weight: 700; color: #1a1917; margin-bottom: 6px; }
+    .rs-sub { font-size: 13.5px; color: #6a6560; margin-bottom: 24px; line-height: 1.5; }
+    .rs-stars { display: flex; justify-content: center; gap: 6px; margin-bottom: 20px; }
+    .rs-star {
+      width: 40px; height: 40px; cursor: pointer; color: #d8d4cc;
+      transition: color .12s, transform .12s;
+    }
+    .rs-star:hover, .rs-star.active { transform: scale(1.08); }
+    .rs-star.active { color: #c9a35a; }
+    .rs-field { text-align: left; margin-bottom: 16px; }
+    .rs-field label { display: block; font-size: 13px; font-weight: 600; color: #6b6a64; margin-bottom: 6px; }
+    .rs-input, .rs-textarea {
+      width: 100%; padding: 10px 13px; border: 1.5px solid #e5e1da; border-radius: 10px;
+      font-size: 14px; font-family: inherit; color: #1a1917; outline: none;
+      transition: border-color .15s, box-shadow .15s;
+    }
+    .rs-textarea { resize: vertical; min-height: 90px; }
+    .rs-input:focus, .rs-textarea:focus { border-color: #c9a35a; box-shadow: 0 0 0 3px rgba(201,163,90,.2); }
+    .rs-btn {
+      width: 100%; padding: 12px; margin-top: 4px;
+      background: linear-gradient(135deg, #c9a35a, #b3893f);
+      color: #1a1917; border: none; border-radius: 10px;
+      font-size: 14px; font-weight: 600; font-family: inherit; cursor: pointer;
+      box-shadow: 0 4px 12px rgba(201,163,90,.3);
+      transition: box-shadow .15s, transform .1s;
+    }
+    .rs-btn:hover { box-shadow: 0 6px 20px rgba(201,163,90,.4); transform: translateY(-1px); }
+    .rs-btn:disabled { opacity: .55; cursor: not-allowed; }
+    .rs-msg { font-size: 13px; color: #dc2626; margin-bottom: 14px; display: none; }
+    .rs-msg.show { display: block; }
+    .rs-estado-icon { width: 52px; height: 52px; margin: 0 auto 16px; color: #10b981; }
+    .rs-loading { color: #9a9890; font-size: 13.5px; padding: 20px 0; }
+  </style>
+</head>
+<body>
+  <div class="rs-card" id="rsCard">
+    <div class="rs-brand">
+      <div class="rs-brand-icon">
+        <svg width="24" height="24" viewBox="0 0 40 40" fill="none">
+          <path d="M8,31 C8,19 10,11 14,10 C16,9 18,15 20,23 C22,31 25,9 28,10 C31,11 33,21 33,31" stroke="white" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        </svg>
+      </div>
+      <span class="rs-brand-name">Memory</span>
+    </div>
+    <div id="rsContent" class="rs-loading">Cargando…</div>
+  </div>
+
+<script type="module">
+  import { supabase } from './js/supabaseClient.js';
+
+  const content = document.getElementById('rsContent');
+  const token = new URLSearchParams(location.search).get('token');
+  let calificacion = 0;
+
+  function renderInvalido() {
+    content.innerHTML = `
+      <div class="rs-title">Enlace no válido</div>
+      <p class="rs-sub">Este enlace de reseña no existe o ya expiró. Si crees que es un error, contacta directamente a quien organizó tu evento.</p>`;
+  }
+
+  function renderYaEnviada() {
+    content.innerHTML = `
+      <svg class="rs-estado-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+      <div class="rs-title">¡Ya enviaste tu reseña!</div>
+      <p class="rs-sub">Gracias por tu tiempo — tu opinión ya fue publicada.</p>`;
+  }
+
+  function renderGracias() {
+    content.innerHTML = `
+      <svg class="rs-estado-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+      <div class="rs-title">¡Gracias por tu reseña!</div>
+      <p class="rs-sub">Tu opinión ya está publicada y nos ayuda muchísimo.</p>`;
+  }
+
+  function renderFormulario(ctx) {
+    content.innerHTML = `
+      <div class="rs-title">¿Cómo estuvo "${escHtmlLocal(ctx.evento_nombre)}"?</div>
+      <p class="rs-sub">Tu opinión sobre este evento nos ayuda a seguir mejorando.</p>
+      <div class="rs-msg" id="rsError"></div>
+      <div class="rs-stars" id="rsStars">
+        ${[1,2,3,4,5].map(n => `
+          <svg class="rs-star" data-n="${n}" viewBox="0 0 20 20" fill="currentColor">
+            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.286 3.958a1 1 0 00.95.69h4.162c.969 0 1.371 1.24.588 1.81l-3.368 2.447a1 1 0 00-.363 1.118l1.287 3.957c.3.922-.755 1.688-1.538 1.118l-3.367-2.446a1 1 0 00-1.176 0l-3.367 2.446c-.783.57-1.838-.196-1.538-1.118l1.287-3.957a1 1 0 00-.363-1.118L2.062 9.385c-.783-.57-.38-1.81.588-1.81h4.163a1 1 0 00.95-.69l1.286-3.958z"/>
+          </svg>`).join('')}
+      </div>
+      <div class="rs-field">
+        <label>Tu nombre (como quieres que aparezca)</label>
+        <input type="text" class="rs-input" id="rsNombre" value="${escHtmlLocal(ctx.cliente_nombre || '')}" placeholder="Ej: María L."/>
+      </div>
+      <div class="rs-field">
+        <label>Tu comentario</label>
+        <textarea class="rs-textarea" id="rsComentario" placeholder="Cuéntanos cómo fue tu experiencia..."></textarea>
+      </div>
+      <button class="rs-btn" id="rsEnviar">Enviar reseña</button>`;
+
+    const stars = content.querySelectorAll('.rs-star');
+    const pintarEstrellas = (n) => stars.forEach(s => s.classList.toggle('active', Number(s.dataset.n) <= n));
+    stars.forEach(s => {
+      s.addEventListener('mouseenter', () => pintarEstrellas(Number(s.dataset.n)));
+      s.addEventListener('click', () => { calificacion = Number(s.dataset.n); pintarEstrellas(calificacion); });
+    });
+    document.getElementById('rsStars').addEventListener('mouseleave', () => pintarEstrellas(calificacion));
+
+    document.getElementById('rsEnviar').addEventListener('click', enviarResena);
+  }
+
+  function escHtmlLocal(str) {
+    const d = document.createElement('div');
+    d.textContent = String(str ?? '');
+    return d.innerHTML;
+  }
+
+  function mostrarError(msg) {
+    const el = document.getElementById('rsError');
+    if (!el) return;
+    el.textContent = msg;
+    el.classList.add('show');
+  }
+
+  async function enviarResena() {
+    const comentario = document.getElementById('rsComentario').value.trim();
+    const nombreMostrado = document.getElementById('rsNombre').value.trim();
+    if (!calificacion) { mostrarError('Selecciona una calificación de 1 a 5 estrellas'); return; }
+    if (!comentario) { mostrarError('Escribe un comentario'); return; }
+
+    const btn = document.getElementById('rsEnviar');
+    btn.disabled = true;
+    btn.textContent = 'Enviando...';
+
+    const { error } = await supabase.rpc('fn_enviar_resena', {
+      p_token: token,
+      p_calificacion: calificacion,
+      p_comentario: comentario,
+      p_nombre_mostrado: nombreMostrado,
+    });
+
+    if (error) {
+      mostrarError(error.message || 'No se pudo enviar la reseña');
+      btn.disabled = false;
+      btn.textContent = 'Enviar reseña';
+      return;
+    }
+    renderGracias();
+  }
+
+  (async () => {
+    if (!token) { renderInvalido(); return; }
+    const { data, error } = await supabase.rpc('fn_resena_por_token', { p_token: token });
+    const ctx = Array.isArray(data) ? data[0] : data;
+    if (error || !ctx) { renderInvalido(); return; }
+    if (ctx.estado === 'Publicada') { renderYaEnviada(); return; }
+    renderFormulario(ctx);
+  })();
+</script>
+</body>
+</html>

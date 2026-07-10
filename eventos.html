@@ -141,6 +141,7 @@
 <script src="js/app.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script type="module">
+import { supabase } from './js/supabaseClient.js';
 import * as eventosService from './js/services/eventosService.js';
 import * as clientesService from './js/services/clientesService.js';
 
@@ -161,6 +162,7 @@ window.editarEvento = editarEvento;
 window.pedirEliminar = pedirEliminar;
 window.abrirAnexos = abrirAnexos;
 window.cerrarAnexos = cerrarAnexos;
+window.solicitarResena = solicitarResena;
 
 /* ── Init & Carga ───────────────────────────────────────────────────── */
 async function inicializar() {
@@ -237,6 +239,10 @@ function renderTabla() {
       <td><strong>${Fmt.currency(ev.presupuesto)}</strong></td>
       <td>
         <div class="actions">
+          ${ev.estado === 'Realizado' ? `
+          <button class="action-btn" title="Solicitar reseña al cliente" onclick="solicitarResena(${ev.id})">
+            <svg viewBox="0 0 20 20" fill="currentColor"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.286 3.958a1 1 0 00.95.69h4.162c.969 0 1.371 1.24.588 1.81l-3.368 2.447a1 1 0 00-.363 1.118l1.287 3.957c.3.922-.755 1.688-1.538 1.118l-3.367-2.446a1 1 0 00-1.176 0l-3.367 2.446c-.783.57-1.838-.196-1.538-1.118l1.287-3.957a1 1 0 00-.363-1.118L2.062 9.385c-.783-.57-.38-1.81.588-1.81h4.163a1 1 0 00.95-.69l1.286-3.958z"/></svg>
+          </button>` : ''}
           <button class="action-btn" title="Anexos" onclick="abrirAnexos(${ev.id})">
             <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8 4a3 3 0 016 0v8a5 5 0 11-10 0V6a1 1 0 112 0v6a3 3 0 106 0V4a1 1 0 10-2 0v8a1 1 0 11-2 0V4z" clip-rule="evenodd"/></svg>
           </button>
@@ -357,6 +363,45 @@ async function pedirEliminar(id) {
   
   Toast.success('Evento eliminado');
   await cargarEventos();
+}
+
+/* ── Solicitar reseña al cliente (correo con link público, sin login) ────── */
+async function solicitarResena(id) {
+  const ev = todosLosEventos.find(e => e.id === id);
+  if (!ev) return;
+  if (!ev.cliente?.email) {
+    Toast.error('Este cliente no tiene un correo registrado');
+    return;
+  }
+  const ok = await Confirm({
+    type: 'warning',
+    title: '¿Solicitar reseña?',
+    message: `Se le enviará un correo a ${ev.cliente.nombre} (${ev.cliente.email}) con un link para dejar su reseña de "${ev.nombre}".`,
+    okText: 'Sí, enviar',
+  });
+  if (!ok) return;
+
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) { Toast.error('Tu sesión expiró. Vuelve a iniciar sesión.'); return; }
+
+  const { error } = await supabase.functions.invoke('solicitar-resena', {
+    body: { evento_id: id },
+    headers: { Authorization: `Bearer ${session.access_token}` },
+  });
+
+  if (error) {
+    let mensaje = error.message;
+    if (error.context && typeof error.context.json === 'function') {
+      try {
+        const cuerpo = await error.context.clone().json();
+        if (cuerpo?.error) mensaje = cuerpo.error;
+      } catch { /* el cuerpo no era JSON, se mantiene el mensaje genérico */ }
+    }
+    Toast.error('No se pudo enviar la solicitud: ' + mensaje);
+    return;
+  }
+
+  Toast.success('Solicitud de reseña enviada ✓');
 }
 
 function exportarCSV() {

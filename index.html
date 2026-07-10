@@ -328,6 +328,14 @@
     transition:transform .18s ease, box-shadow .18s ease, opacity .18s ease;
   }
   .pf-login-btn:hover { transform:translateY(-2px); box-shadow:0 16px 34px rgba(201,163,90,.34); }
+  .pf-account-avatar {
+    width:24px; height:24px; border-radius:50%; flex-shrink:0;
+    display:inline-flex; align-items:center; justify-content:center;
+    overflow:hidden; background:#1a1917; color:#fff;
+    font-size:10px; font-weight:800; letter-spacing:-.02em;
+    box-shadow:0 0 0 2px rgba(255,255,255,.35);
+  }
+  .pf-account-avatar img { width:100%; height:100%; object-fit:cover; display:block; }
   .pf-nav.is-scrolled {
     background:rgba(255,255,255,.88);
     box-shadow:0 20px 55px rgba(31,27,20,.12);
@@ -872,12 +880,39 @@ AppLogo.paintInto('.pf-brand-icon');
 AppLogo.onChange(() => AppLogo.paintInto('.pf-brand-icon'));
 
 const publicAccountBtn = document.getElementById('publicAccountBtn');
+const publicAccountIcon = publicAccountBtn?.querySelector('svg');
+const accountInitials = (name = 'U') => String(name)
+  .trim()
+  .split(/\s+/)
+  .map(part => part[0])
+  .join('')
+  .slice(0, 2)
+  .toUpperCase() || 'U';
+const escapeAttr = (value = '') => String(value)
+  .replace(/&/g, '&amp;')
+  .replace(/"/g, '&quot;')
+  .replace(/</g, '&lt;')
+  .replace(/>/g, '&gt;');
+
+const setPublicAccountAvatar = (publicSession) => {
+  if (!publicAccountBtn || !publicAccountIcon || !publicSession) return;
+  const avatar = document.createElement('span');
+  avatar.className = 'pf-account-avatar';
+  if (publicSession.avatar) {
+    avatar.innerHTML = `<img src="${escapeAttr(publicSession.avatar)}" alt="${escapeAttr(publicSession.nombre || 'Usuario')}">`;
+  } else {
+    avatar.textContent = accountInitials(publicSession.nombre || publicSession.email || 'U');
+  }
+  publicAccountIcon.replaceWith(avatar);
+};
+
 const updatePublicAccountBtn = (publicSession) => {
   if (!publicAccountBtn || !publicSession) return;
   const rol = publicSession.rol === 'Administrador' ? 'Admin' : 'Planificador';
   publicAccountBtn.href = 'dashboard.html';
   publicAccountBtn.querySelector('span').textContent = `Mi Cuenta ${rol}`;
   publicAccountBtn.title = 'Ir al dashboard';
+  setPublicAccountAvatar(publicSession);
 };
 
 async function syncPublicAccountBtn() {
@@ -961,6 +996,52 @@ const statsObs = new IntersectionObserver((entries) => {
   });
 }, { threshold: 0.4 });
 statsObs.observe(document.querySelector('.pf-hero-stats'));
+
+/* ── Reseñas reales (resenas, estado Publicada) ───────────────────────────
+   Si todavía no hay ninguna, se deja el fallback estático de ejemplo. */
+async function cargarResenasPublicas() {
+  try {
+    const { supabase } = await import('./js/supabaseClient.js');
+    const { data, error } = await supabase
+      .from('resenas')
+      .select('calificacion, comentario, nombre_mostrado, evento_nombre, created_at')
+      .eq('estado', 'Publicada')
+      .order('created_at', { ascending: false })
+      .limit(9);
+    if (error || !data || !data.length) return;
+
+    const promedioNum = data.reduce((s, r) => s + r.calificacion, 0) / data.length;
+    const promedio = promedioNum.toFixed(1);
+    const redondeado = Math.round(promedioNum);
+    const ratingEl = document.querySelector('.pf-reviews-rating');
+    if (ratingEl) {
+      ratingEl.innerHTML = `
+        <span class="stars">${'★'.repeat(redondeado)}${'☆'.repeat(5 - redondeado)}</span>
+        <strong>${promedio} / 5</strong>
+        <span>· ${data.length} valoraci${data.length === 1 ? 'ón' : 'ones'} de clientes reales</span>`;
+    }
+
+    const COLORS = ['#c9a35a','#10b981','#f59e0b','#3b82f6','#ec4899','#8b5cf6'];
+    const initials = (name) => String(name || 'A').trim().split(/\s+/).map(p => p[0]).join('').slice(0, 2).toUpperCase();
+    const escape = (s) => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+    const grid = document.querySelector('.pf-reviews');
+    if (!grid) return;
+    grid.innerHTML = data.map((r, i) => `
+      <div class="pf-review-card">
+        <div class="pf-review-quote">"</div>
+        <div class="pf-stars" style="margin-top:8px">${'★'.repeat(r.calificacion)}${'☆'.repeat(5 - r.calificacion)}</div>
+        <p class="pf-review-text">${escape(r.comentario)}</p>
+        <div class="pf-review-author">
+          <div class="pf-review-avatar" style="background:${COLORS[i % COLORS.length]};color:#fff">${initials(r.nombre_mostrado)}</div>
+          <div><div class="pf-review-name">${escape(r.nombre_mostrado || 'Cliente')}</div><div class="pf-review-meta">${escape(r.evento_nombre || '')}</div></div>
+        </div>
+      </div>`).join('');
+  } catch {
+    /* Si falla, la landing sigue mostrando los testimonios de ejemplo. */
+  }
+}
+cargarResenasPublicas();
 </script>
 </body>
 </html>

@@ -19,6 +19,10 @@ create table resenas (
   calificacion      smallint check (calificacion between 1 and 5),
   comentario        text,
   nombre_mostrado   text,
+  -- Denormalizado a propósito: la vitrina pública de index.html (rol anon)
+  -- no tiene RLS para leer `eventos`, así que el nombre se copia aquí al
+  -- crear la solicitud en vez de resolverlo con un join en cada carga.
+  evento_nombre     text,
   enviado_en        timestamptz not null default now(),
   respondido_en     timestamptz,
   created_at        timestamptz not null default now(),
@@ -49,7 +53,11 @@ create policy resenas_select_publicas on resenas for select
   to anon
   using (estado = 'Publicada');
 
-grant select on resenas to anon;
+-- Grant acotado a columnas: aunque la policy ya filtra a solo 'Publicada',
+-- esto evita que anon pueda pedir columnas internas (token, cliente_id,
+-- planificador_id, evento_id) que no necesita para la vitrina pública.
+grant select (calificacion, comentario, nombre_mostrado, evento_nombre, created_at, estado)
+  on resenas to anon;
 
 -- El formulario público (resena.html) no tiene sesión ni fila propia que
 -- lo autorice por RLS: entra solo con el token de la URL, que funciona como
