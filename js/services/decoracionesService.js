@@ -124,7 +124,7 @@ export const cambiarEstado = async (id, estado) => {
    Mismo patrón que platosService.subirImagen: sube primero, guarda la URL
    en la fila y recién después borra el archivo anterior si había uno. */
 const CATALOGO_BUCKET = 'catalogo';
-const MAX_IMAGEN_MB = 5;
+const MAX_IMAGEN_MB = 10;
 const TIPOS_IMAGEN_PERMITIDOS = ['image/jpeg', 'image/png', 'image/webp'];
 
 /**

@@ -127,7 +127,7 @@ export const cambiarEstado = async (id, estado) => {
    anterior (si había uno) — nunca al revés, para no dejar la fila apuntando
    a un archivo que ya no existe si algo falla a mitad de camino. */
 const CATALOGO_BUCKET = 'catalogo';
-const MAX_IMAGEN_MB = 5;
+const MAX_IMAGEN_MB = 10;
 const TIPOS_IMAGEN_PERMITIDOS = ['image/jpeg', 'image/png', 'image/webp'];
 
 /**

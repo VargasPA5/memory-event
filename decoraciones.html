@@ -145,7 +145,7 @@
             <input type="file" id="fImagen" accept="image/jpeg,image/png,image/webp" style="display:none"/>
           </label>
           <button type="button" class="img-upload-remove" id="btnQuitarImagen" hidden onclick="quitarImagenSeleccionada()">Quitar imagen</button>
-          <span class="img-upload-hint">JPG, PNG o WebP · máx. 5MB</span>
+          <span class="img-upload-hint">JPG, PNG o WebP · máx. 10MB</span>
         </div>
       </div>
     </div>
@@ -317,7 +317,7 @@ document.getElementById('fImagen').addEventListener('change', (e) => {
   if (!file) return;
   const permitidos = ['image/jpeg','image/png','image/webp'];
   if (!permitidos.includes(file.type)) { Toast.error('Solo se permiten imágenes JPG, PNG o WebP'); e.target.value = ''; return; }
-  if (file.size > 5 * 1024 * 1024) { Toast.error('La imagen no debe superar 5MB'); e.target.value = ''; return; }
+  if (file.size > 10 * 1024 * 1024) { Toast.error('La imagen no debe superar 10MB'); e.target.value = ''; return; }
 
   archivoImagenSeleccionado = file;
   quitarImagenAlGuardar = false;
