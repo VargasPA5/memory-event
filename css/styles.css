@@ -109,6 +109,7 @@ img { display: block; max-width: 100%; }
   position: sticky;
   top: 0;
   height: 100vh;
+  height: 100dvh;
   z-index: 50;
   transition: width var(--t-slow), min-width var(--t-slow);
   border-right: 1px solid var(--sb-border);
@@ -126,9 +127,22 @@ img { display: block; max-width: 100%; }
   height: 100%;
   overflow-y: auto;
   overflow-x: hidden;
+  /* Sin esto, el scroll táctil dentro de un contenedor position:fixed no
+     responde de forma confiable en iOS/Safari — el menú "no hace scroll"
+     aunque el contenido sí desborde. overscroll-behavior evita que ese
+     scroll se filtre y mueva la página de fondo detrás del menú. */
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 }
 .sidebar.collapsed .sidebar__inner { overflow-x: visible; }
 .sidebar.collapsed .sidebar__nav { overflow: visible; }
+.sidebar__nav {
+  /* Un hijo flex sin min-height:0 puede negarse a encogerse dentro de un
+     padre con overflow-y:auto, dejando el contenido de más (el footer con
+     "Cerrar sesión" incluido) fuera del área que realmente se puede
+     desplazar. */
+  min-height: 0;
+}
 .sidebar__inner::-webkit-scrollbar { width: 0; }
 
 /* Brand */
@@ -1139,6 +1153,12 @@ img { display: block; max-width: 100%; }
     transform: translateX(-100%);
     transition: transform var(--t-slow);
     height: 100vh;
+    /* 100dvh (altura de viewport "dinámica") se ajusta cuando el navegador
+       móvil oculta/muestra la barra de direcciones; 100vh no lo hace y
+       puede quedar más alto que el área visible real, empujando el footer
+       (con "Cerrar sesión") fuera de la pantalla. Los navegadores que no
+       soportan dvh simplemente ignoran esta línea y se quedan con 100vh. */
+    height: 100dvh;
     width: var(--sidebar-w) !important;
     min-width: var(--sidebar-w) !important;
   }
