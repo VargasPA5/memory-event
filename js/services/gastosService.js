@@ -133,12 +133,15 @@ export const actualizar = async (id, cambios) => {
 };
 
 export const eliminar = async (id) => {
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('gastos')
     .delete()
-    .eq('id', id);
+    .eq('id', id)
+    .select('id')
+    .maybeSingle();
 
   if (error) return { data: null, error: _err(error, `eliminar(${id})`) };
+  if (!data) return { data: null, error: 'No se eliminó el gasto. Verifica permisos o recarga la página.' };
   return { data: true, error: null };
 };
 

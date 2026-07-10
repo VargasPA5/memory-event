@@ -141,6 +141,7 @@ import * as eventosService from './js/services/eventosService.js';
 import * as proveedoresService from './js/services/proveedoresService.js';
 
 const CATEGORIAS = ['Catering','Decoración','Fotografía/Filmación','Música/Sonido','Transporte','Mobiliario','Viáticos','Papelería','Caja chica','Combustible','Otros'];
+const METODOS = ['Efectivo','Transferencia','Tarjeta','Yape/Plin'];
 
 let editandoId = null;
 let todosLosGastos = [];
@@ -167,6 +168,16 @@ function poblarCategorias() {
     const of = document.createElement('option'); of.value = c; of.textContent = c; filtro.appendChild(of);
     const oc = document.createElement('option'); oc.value = c; oc.textContent = c; campo.appendChild(oc);
   });
+}
+
+function normalizarCategoriaMetodo(gasto = {}) {
+  const normalizado = { ...gasto };
+  if (METODOS.includes(normalizado.categoria) && CATEGORIAS.includes(normalizado.metodo)) {
+    const categoria = normalizado.metodo;
+    normalizado.metodo = normalizado.categoria;
+    normalizado.categoria = categoria;
+  }
+  return normalizado;
 }
 
 function poblarEventos() {
@@ -286,7 +297,7 @@ function renderTabla() {
   const tbody = document.getElementById('tablaBody');
   const ahora = new Date();
 
-  const filtrados = todosLosGastos.filter(g => {
+  const filtrados = todosLosGastos.map(normalizarCategoriaMetodo).filter(g => {
     const proveedor = g.evento_proveedor?.proveedor?.nombre || '';
     const texto = `${g.evento?.nombre || ''} ${proveedor} ${g.categoria || ''} ${g.descripcion || ''}`.toLowerCase();
     return texto.includes(txt)
@@ -295,16 +306,17 @@ function renderTabla() {
       && (!metodo || g.metodo === metodo);
   });
 
-  const total = todosLosGastos.filter(g => g.estado !== 'Anulado').reduce((s, g) => s + Number(g.monto || 0), 0);
-  const esteMes = todosLosGastos.filter(g => {
+  const gastosNormalizados = todosLosGastos.map(normalizarCategoriaMetodo);
+  const total = gastosNormalizados.filter(g => g.estado !== 'Anulado').reduce((s, g) => s + Number(g.monto || 0), 0);
+  const esteMes = gastosNormalizados.filter(g => {
     const d = new Date(`${g.fecha}T00:00:00`);
     return g.estado !== 'Anulado' && d.getMonth() === ahora.getMonth() && d.getFullYear() === ahora.getFullYear();
   }).reduce((s, g) => s + Number(g.monto || 0), 0);
 
   document.getElementById('kTotal').textContent = Fmt.currencyShort(total);
   document.getElementById('kMes').textContent = Fmt.currencyShort(esteMes);
-  document.getElementById('kPagados').textContent = todosLosGastos.filter(g => g.estado === 'Pagado').length;
-  document.getElementById('kPendientes').textContent = todosLosGastos.filter(g => g.estado === 'Pendiente').length;
+  document.getElementById('kPagados').textContent = gastosNormalizados.filter(g => g.estado === 'Pagado').length;
+  document.getElementById('kPendientes').textContent = gastosNormalizados.filter(g => g.estado === 'Pendiente').length;
   document.getElementById('paginacionInfo').textContent = `Mostrando ${filtrados.length} de ${todosLosGastos.length} gastos`;
 
   tbody.innerHTML = '';
@@ -369,10 +381,10 @@ function limpiarForm() {
 
 async function guardarGasto() {
   const evento_id = parseInt(document.getElementById('fEvento').value) || null;
-  const categoria = document.getElementById('fCategoria').value;
+  let categoria = document.getElementById('fCategoria').value;
   const monto = parseFloat(document.getElementById('fMonto').value) || 0;
   const fecha = document.getElementById('fFecha').value;
-  const metodo = document.getElementById('fMetodo').value;
+  let metodo = document.getElementById('fMetodo').value;
   const estado = document.getElementById('fEstado').value;
   const comprobante_url = document.getElementById('fComprobante').value.trim();
   const descripcion = document.getElementById('fDescripcion').value.trim();
@@ -383,6 +395,7 @@ async function guardarGasto() {
   if (monto <= 0) { Toast.error('El monto debe ser mayor a 0'); return; }
   if (!fecha) { Toast.error('La fecha es obligatoria'); return; }
   if (comprobante_url && !/^https?:\/\/.+/i.test(comprobante_url)) { Toast.error('El adjunto debe ser una URL válida'); return; }
+  ({ categoria, metodo } = normalizarCategoriaMetodo({ categoria, metodo }));
 
   const payload = { evento_id, evento_proveedor_id, categoria, monto, fecha, metodo, estado, comprobante_url, descripcion };
   const res = editandoId !== null
@@ -399,22 +412,23 @@ async function editarGasto(id) {
   const { data: g, error } = await gastosService.getById(id);
   if (error) { Toast.error('Error al cargar gasto'); return; }
   if (!g) return;
+  const gasto = normalizarCategoriaMetodo(g);
   editandoId = id;
   poblarEventos();
   document.getElementById('modalTitulo').textContent = 'Editar Gasto';
-  document.getElementById('fEvento').value = g.evento_id || '';
+  document.getElementById('fEvento').value = gasto.evento_id || '';
   await onEventoChange();
-  document.getElementById('fEventoProveedor').value = g.evento_proveedor_id || '';
+  document.getElementById('fEventoProveedor').value = gasto.evento_proveedor_id || '';
   document.getElementById('fProveedorBuscar').value = '';
   document.getElementById('fProveedorNuevo').value = '';
-  document.getElementById('fServicioProveedor').value = g.evento_proveedor?.servicio_contratado || '';
-  document.getElementById('fCategoria').value = g.categoria || 'Otros';
-  document.getElementById('fMonto').value = g.monto || '';
-  document.getElementById('fFecha').value = g.fecha || '';
-  document.getElementById('fMetodo').value = g.metodo || 'Efectivo';
-  document.getElementById('fEstado').value = g.estado || 'Pagado';
-  document.getElementById('fComprobante').value = g.comprobante_url || '';
-  document.getElementById('fDescripcion').value = g.descripcion || '';
+  document.getElementById('fServicioProveedor').value = gasto.evento_proveedor?.servicio_contratado || '';
+  document.getElementById('fCategoria').value = gasto.categoria || 'Otros';
+  document.getElementById('fMonto').value = gasto.monto || '';
+  document.getElementById('fFecha').value = gasto.fecha || '';
+  document.getElementById('fMetodo').value = gasto.metodo || 'Efectivo';
+  document.getElementById('fEstado').value = gasto.estado || 'Pagado';
+  document.getElementById('fComprobante').value = gasto.comprobante_url || '';
+  document.getElementById('fDescripcion').value = gasto.descripcion || '';
   document.getElementById('modalOverlay').classList.add('modal-overlay--open');
 }
 
@@ -429,7 +443,7 @@ async function pedirEliminar(id) {
 
 function exportarCSV() {
   const rows = [['Fecha','Evento','Proveedor','Categoría','Descripción','Monto','Estado','Método','Adjunto']];
-  todosLosGastos.forEach(g => rows.push([
+  todosLosGastos.map(normalizarCategoriaMetodo).forEach(g => rows.push([
     g.fecha,
     g.evento?.nombre || '',
     g.evento_proveedor?.proveedor?.nombre || '',
