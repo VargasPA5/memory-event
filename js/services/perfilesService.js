@@ -108,7 +108,8 @@ export const subirAvatar = async (file) => {
     return { data: null, error: 'Solo se permiten imágenes JPG, PNG o WebP' };
   }
   if (file.size > MAX_AVATAR_MB * 1024 * 1024) {
-    return { data: null, error: `La imagen no debe superar ${MAX_AVATAR_MB}MB` };
+    const mb = (file.size / (1024 * 1024)).toFixed(2);
+    return { data: null, error: `La imagen no debe superar ${MAX_AVATAR_MB}MB (tu archivo pesa ${mb}MB)` };
   }
 
   const { data: authData, error: authError } = await supabase.auth.getUser();

@@ -288,7 +288,10 @@ export const subirAnexo = async (eventoId, file) => {
   const esImagen = file.type.startsWith('image/');
   const esVideo = file.type.startsWith('video/');
   if (!esImagen && !esVideo) return { data: null, error: 'Solo se permiten imágenes o videos' };
-  if (file.size > MAX_ANEXO_MB * 1024 * 1024) return { data: null, error: `El archivo no debe superar ${MAX_ANEXO_MB}MB` };
+  if (file.size > MAX_ANEXO_MB * 1024 * 1024) {
+    const mb = (file.size / (1024 * 1024)).toFixed(2);
+    return { data: null, error: `El archivo no debe superar ${MAX_ANEXO_MB}MB (tu archivo pesa ${mb}MB)` };
+  }
 
   const path = `${eventoId}/${Date.now()}_${file.name}`;
   const { error: uploadError } = await supabase.storage

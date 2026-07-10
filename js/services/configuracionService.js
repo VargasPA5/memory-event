@@ -87,7 +87,8 @@ export const subirLogo = async (file) => {
     return { data: null, error: 'Solo se permiten imágenes JPG, PNG o WebP' };
   }
   if (file.size > MAX_LOGO_MB * 1024 * 1024) {
-    return { data: null, error: `El logo no debe superar ${MAX_LOGO_MB}MB` };
+    const mb = (file.size / (1024 * 1024)).toFixed(2);
+    return { data: null, error: `El logo no debe superar ${MAX_LOGO_MB}MB (tu archivo pesa ${mb}MB)` };
   }
 
   const { data: previo } = await obtenerLogo();
