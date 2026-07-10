@@ -17,3 +17,10 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     detectSessionInUrl: true,
   },
 });
+
+/* Se resuelve cuando supabase-js termina de restaurar la sesión guardada en
+   localStorage y de adjuntarla a las peticiones. Las páginas deben esperar
+   esta promesa antes de disparar su primera consulta: si consultan antes de
+   que esto resuelva, la petición sale sin token y Postgres la trata como
+   anónima (permission denied), aunque el usuario sí tenga sesión iniciada. */
+export const sessionReady = supabase.auth.getSession();

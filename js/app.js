@@ -411,8 +411,13 @@ const initMobileNav = () => {
   initSidebarToggle();
   initMobileNav();
   initThemeToggle();
-  initNotifDropdown();
   initGlobalSearch();
+
+  // initNotifDropdown() consulta la tabla `notificaciones`: espera a que
+  // supabase-js termine de restaurar la sesión antes de dispararla (ver
+  // comentario de sessionReady en supabaseClient.js), o la petición sale
+  // sin token y falla como si no hubiera sesión.
+  import('./supabaseClient.js').then(({ sessionReady }) => sessionReady).then(initNotifDropdown);
 
   /* Repinta el logo del sidebar si cambia en configuración sin recargar. */
   AppLogo.onChange(() => {
