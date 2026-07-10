@@ -136,6 +136,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script src="js/boletas.js"></script>
 <script type="module">
+import { sessionReady } from './js/supabaseClient.js';
 import * as clientesService from './js/services/clientesService.js';
 import * as boletasService from './js/services/boletasService.js';
 
@@ -384,7 +385,7 @@ function indicarGuardando(saving) {
 }
 
 /* ── Init ───────────────────────────────────────────────────────────── */
-cargarClientes();
+sessionReady.then(cargarClientes);
 </script>
 </body>
 </html>

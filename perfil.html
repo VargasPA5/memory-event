@@ -247,6 +247,7 @@
 <script src="js/ui.js"></script>
 <script src="js/app.js"></script>
 <script type="module">
+import { sessionReady } from './js/supabaseClient.js';
 import { getPerfilActual, actualizarPerfil } from './js/services/perfilesService.js';
 
 const AVATAR_COLORS_P = ['#c9a35a','#10b981','#f59e0b','#3b82f6','#ec4899','#8b5cf6','#14b8a6','#f97316'];
@@ -357,7 +358,7 @@ function evaluarFuerza(pwd) {
 window.guardarPerfil = guardarPerfil;
 window.cambiarPassword = cambiarPassword;
 window.evaluarFuerza = evaluarFuerza;
-cargarPerfil();
+sessionReady.then(cargarPerfil);
 </script>
 
 <script type="module">

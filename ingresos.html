@@ -119,6 +119,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script type="module">
+import { sessionReady } from './js/supabaseClient.js';
 import * as ingresosService from './js/services/ingresosService.js';
 import * as reservasService from './js/services/reservasService.js';
 
@@ -489,7 +490,7 @@ async function cargarDatos() {
   renderTabla();
 }
 
-cargarDatos();
+sessionReady.then(cargarDatos);
 </script>
 </body>
 </html>

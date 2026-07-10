@@ -161,6 +161,7 @@
 <script src="js/app.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script type="module">
+import { sessionReady } from './js/supabaseClient.js';
 import * as platosService from './js/services/platosService.js';
 
 const CATEGORIAS = ['Entrada','Plato principal','Postre','Bebida','Otros'];
@@ -435,7 +436,7 @@ async function cargarDatos() {
 }
 
 cambiarVista('tabla');
-cargarDatos();
+sessionReady.then(cargarDatos);
 </script>
 </body>
 </html>

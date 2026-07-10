@@ -173,6 +173,7 @@
 <script src="js/ui.js"></script>
 <script src="js/app.js"></script>
 <script type="module">
+import { sessionReady } from './js/supabaseClient.js';
 import * as reportesService from './js/services/reportesService.js';
 
 const CHART_COLORS = ['#c9a35a','#10b981','#f59e0b','#3b82f6','#ec4899','#8b5cf6','#14b8a6','#f97316'];
@@ -475,6 +476,7 @@ window.actualizarReporteCategoria = actualizarReporteCategoria;
 window.exportarCategoriaExcel = exportarCategoriaExcel;
 window.exportarCategoriaPDF = exportarCategoriaPDF;
 
+await sessionReady;
 await poblarFiltrosCategoria();
 await actualizarTodo();
 Theme.onChange(() => {

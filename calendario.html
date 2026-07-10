@@ -149,6 +149,7 @@
 <script src="js/ui.js"></script>
 <script src="js/app.js"></script>
 <script type="module">
+import { sessionReady } from './js/supabaseClient.js';
 import * as calendarioService from './js/services/calendarioService.js';
 import { state, setView, movePeriod, goToday, getVisibleRange, toISODate } from './js/calendar/calendarState.js';
 import { initFilters, populateFilterOptions } from './js/calendar/calendarFilters.js';
@@ -216,6 +217,11 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape') closePanel();
 });
 
+// Espera a que supabase-js termine de restaurar la sesión guardada antes de
+// pedir datos: si la consulta sale antes de tiempo, viaja sin token y la
+// base de datos no devuelve ningún evento (ver mismo problema ya resuelto
+// en usuarios.html / app.js — aquí nunca se había corregido).
+await sessionReady;
 await cargarOpciones();
 initFilters(cargarEventos);
 renderCalendar(abrirDetalle);

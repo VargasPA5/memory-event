@@ -133,6 +133,7 @@
 <script src="js/ui.js"></script>
 <script src="js/app.js"></script>
 <script type="module">
+import { sessionReady } from './js/supabaseClient.js';
 import * as dashboardService from './js/services/dashboardService.js';
 import { renderIncomeChart, renderReservasChart, bindChartThemeRefresh } from './js/dashboard/dashboardCharts.js';
 import { createDashboardRealtime } from './js/dashboard/dashboardRealtime.js';
@@ -179,7 +180,7 @@ async function cargarDashboard() {
 
 renderGreeting();
 bindChartThemeRefresh(() => dashboardData);
-cargarDashboard();
+sessionReady.then(cargarDashboard);
 
 window.addEventListener('beforeunload', () => realtime.stop());
 </script>
