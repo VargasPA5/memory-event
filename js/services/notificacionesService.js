@@ -93,18 +93,24 @@ export const marcarLeida = async (id) => {
 };
 
 /**
- * Marca TODAS las notificaciones del usuario actual como leídas.
+ * Marca las notificaciones visibles como leídas. Si se envían IDs, se limita
+ * a ese conjunto; RLS sigue decidiendo qué filas puede actualizar el usuario.
  * Equivalente al botón "Marcar todo leído" del topbar de app.js.
  */
-export const marcarTodasLeidas = async () => {
+export const marcarTodasLeidas = async (ids = []) => {
   const uid = await _uid();
   if (!uid) return { data: null, error: 'No hay sesión activa' };
 
-  const { error } = await supabase
+  let query = supabase
     .from('notificaciones')
     .update({ leido: true, leido_at: new Date().toISOString() })
-    .eq('leido', false)
-    .eq('destinatario_id', uid);
+    .eq('leido', false);
+
+  if (Array.isArray(ids) && ids.length) {
+    query = query.in('id', ids);
+  }
+
+  const { error } = await query;
 
   if (error) return { data: null, error: _err(error, 'marcarTodasLeidas') };
   return { data: true, error: null };

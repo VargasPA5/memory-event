@@ -146,18 +146,10 @@ img { display: block; max-width: 100%; }
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(201,163,90,.46) transparent;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
-.sidebar__nav::-webkit-scrollbar { width: 8px; }
-.sidebar__nav::-webkit-scrollbar-track { background: transparent; }
-.sidebar__nav::-webkit-scrollbar-thumb {
-  background: rgba(201,163,90,.36);
-  border-radius: 999px;
-  border: 2px solid transparent;
-  background-clip: padding-box;
-}
-.sidebar__nav::-webkit-scrollbar-thumb:hover { background: rgba(201,163,90,.58); background-clip: padding-box; }
+.sidebar__nav::-webkit-scrollbar { width: 0; height: 0; }
 
 /* Brand */
 .sidebar__header {

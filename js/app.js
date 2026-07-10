@@ -262,10 +262,18 @@ const initNotifDropdown = () => {
   });
 
   markAll?.addEventListener('click', async e => {
+    e.preventDefault();
     e.stopPropagation();
     const { notificacionesService } = await getServices();
-    await notificacionesService.marcarTodasLeidas();
-    renderNotifDropdown();
+    const ids = _notifItems.filter(i => !i.leido).map(i => i.id);
+    if (!ids.length) return;
+    const { error } = await notificacionesService.marcarTodasLeidas(ids);
+    if (error) {
+      console.warn('[app] No se pudieron marcar notificaciones:', error);
+      return;
+    }
+    _notifItems = _notifItems.map(i => ({ ...i, leido: true }));
+    await renderNotifDropdown();
   });
 
   document.addEventListener('click', e => {
