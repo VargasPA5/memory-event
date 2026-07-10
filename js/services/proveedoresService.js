@@ -130,6 +130,105 @@ export const buscar = async (query) => {
   return { data, error: null };
 };
 
+/* ── Catálogos ofrecidos por proveedor ─────────────────────────────────── */
+
+export const getCatalogoOpciones = async () => {
+  const [platos, decoraciones] = await Promise.all([
+    supabase
+      .from('platos')
+      .select('id, nombre, categoria, descripcion, precio_referencial, estado')
+      .eq('estado', 'Activo')
+      .order('nombre'),
+    supabase
+      .from('decoraciones')
+      .select('id, nombre, tipo, descripcion, costo_referencial, estado')
+      .eq('estado', 'Activo')
+      .order('nombre'),
+  ]);
+
+  const error = platos.error || decoraciones.error;
+  if (error) return { data: null, error: _err(error, 'getCatalogoOpciones') };
+
+  return {
+    data: {
+      platos: platos.data || [],
+      decoraciones: decoraciones.data || [],
+    },
+    error: null,
+  };
+};
+
+export const getCatalogosProveedor = async (proveedorId) => {
+  const [platos, decoraciones] = await Promise.all([
+    supabase
+      .from('proveedor_platos')
+      .select(`
+        id,
+        proveedor_id,
+        plato_id,
+        precio_referencial,
+        activo,
+        notas,
+        plato:platos (id, nombre, categoria, descripcion, precio_referencial, estado)
+      `)
+      .eq('proveedor_id', proveedorId)
+      .order('id'),
+    supabase
+      .from('proveedor_decoraciones')
+      .select(`
+        id,
+        proveedor_id,
+        decoracion_id,
+        costo_referencial,
+        activo,
+        notas,
+        decoracion:decoraciones (id, nombre, tipo, descripcion, costo_referencial, estado)
+      `)
+      .eq('proveedor_id', proveedorId)
+      .order('id'),
+  ]);
+
+  const error = platos.error || decoraciones.error;
+  if (error) return { data: null, error: _err(error, `getCatalogosProveedor(${proveedorId})`) };
+
+  return {
+    data: {
+      platos: platos.data || [],
+      decoraciones: decoraciones.data || [],
+    },
+    error: null,
+  };
+};
+
+export const actualizarCatalogosProveedor = async (proveedorId, catalogos = {}) => {
+  const platos = (catalogos.platos || []).map(item => ({
+    plato_id: Number(item.plato_id),
+    precio_referencial: item.precio_referencial === '' || item.precio_referencial == null
+      ? null
+      : Number(item.precio_referencial),
+    activo: item.activo !== false,
+    notas: item.notas?.trim() || null,
+  })).filter(item => item.plato_id);
+
+  const decoraciones = (catalogos.decoraciones || []).map(item => ({
+    decoracion_id: Number(item.decoracion_id),
+    costo_referencial: item.costo_referencial === '' || item.costo_referencial == null
+      ? null
+      : Number(item.costo_referencial),
+    activo: item.activo !== false,
+    notas: item.notas?.trim() || null,
+  })).filter(item => item.decoracion_id);
+
+  const { error } = await supabase.rpc('fn_actualizar_catalogo_proveedor', {
+    p_proveedor_id: Number(proveedorId),
+    p_platos: platos,
+    p_decoraciones: decoraciones,
+  });
+
+  if (error) return { data: null, error: _err(error, `actualizarCatalogosProveedor(${proveedorId})`) };
+  return { data: true, error: null };
+};
+
 /* ── Proveedores por evento (tabla evento_proveedores N:M) ───────────────── */
 
 /**

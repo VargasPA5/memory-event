@@ -229,6 +229,14 @@ function crearHandlersPanel(eventoId) {
       () => calendarioService.eliminarChecklist(id),
       'Tarea eliminada'
     ),
+    onProveedorSave: (id, campos) => ejecutarDetalle(
+      () => id ? calendarioService.actualizarProveedorEvento(id, campos) : calendarioService.asociarProveedor(eventoId, campos),
+      id ? 'Proveedor actualizado' : 'Proveedor asignado'
+    ),
+    onProveedorDelete: id => ejecutarDetalle(
+      () => calendarioService.desasociarProveedor(id),
+      'Proveedor desasociado'
+    ),
     onAgendaSave: (id, campos) => ejecutarDetalle(
       () => id ? calendarioService.actualizarAgenda(id, campos) : calendarioService.crearAgenda(eventoId, campos),
       id ? 'Actividad actualizada' : 'Actividad agregada'

@@ -110,6 +110,50 @@
   </div>
 </div>
 
+<!-- Modal catálogo del proveedor -->
+<div class="modal-overlay" id="catalogoOverlay">
+  <div class="modal" style="max-width:980px">
+    <div class="modal-header">
+      <h3 id="catalogoTitulo">Catálogo del proveedor</h3>
+      <button class="modal-close" onclick="cerrarCatalogo()">✕</button>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Buscar platos</label>
+        <input type="text" class="form-input" id="buscarPlatosProveedor" placeholder="Filtrar platos ofrecidos" oninput="renderCatalogoProveedor()"/>
+      </div>
+      <div class="form-group">
+        <label>Buscar decoraciones</label>
+        <input type="text" class="form-input" id="buscarDecoracionesProveedor" placeholder="Filtrar decoraciones ofrecidas" oninput="renderCatalogoProveedor()"/>
+      </div>
+    </div>
+    <div class="form-row" style="align-items:flex-start">
+      <div class="form-group">
+        <label>Platos que ofrece</label>
+        <div class="tbl-wrap" style="max-height:360px;overflow:auto">
+          <table class="tbl">
+            <thead><tr><th>Activo</th><th>Plato</th><th>Precio</th><th>Notas</th></tr></thead>
+            <tbody id="catPlatosBody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Decoraciones que ofrece</label>
+        <div class="tbl-wrap" style="max-height:360px;overflow:auto">
+          <table class="tbl">
+            <thead><tr><th>Activo</th><th>Decoración</th><th>Costo</th><th>Notas</th></tr></thead>
+            <tbody id="catDecoracionesBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn--outline" onclick="cerrarCatalogo()">Cancelar</button>
+      <button class="btn btn--primary" onclick="guardarCatalogoProveedor()">Guardar Catálogo</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast-container"></div>
 <script src="js/auth.js"></script>
 <script src="js/ui.js"></script>
@@ -121,11 +165,20 @@ import * as proveedoresService from './js/services/proveedoresService.js';
 
 let editandoId = null;
 let todosLosProveedores = [];
+let catalogoProveedorId = null;
+let platosCatalogoOpciones = [];
+let decoracionesCatalogoOpciones = [];
+let proveedorPlatosActuales = [];
+let proveedorDecoracionesActuales = [];
 
 window.renderTabla = renderTabla;
+window.renderCatalogoProveedor = renderCatalogoProveedor;
 window.exportarCSV = exportarCSV;
 window.abrirModal = abrirModal;
 window.cerrarModal = cerrarModal;
+window.abrirCatalogo = abrirCatalogo;
+window.cerrarCatalogo = cerrarCatalogo;
+window.guardarCatalogoProveedor = guardarCatalogoProveedor;
 window.guardarProveedor = guardarProveedor;
 window.editarProveedor = editarProveedor;
 window.pedirEliminar = pedirEliminar;
@@ -171,6 +224,10 @@ function renderTabla() {
       <td>${Fmt.date(p.created_at)}</td>
       <td>
         <div class="actions">
+          ${Auth.isAdmin() ? `
+          <button class="action-btn" title="Catálogo ofrecido" onclick="abrirCatalogo(${p.id})">
+            <svg viewBox="0 0 20 20" fill="currentColor"><path d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V7.414A2 2 0 0017.414 6L15 3.586A2 2 0 0013.586 3H4zm1 4a1 1 0 011-1h5a1 1 0 110 2H6a1 1 0 01-1-1zm0 4a1 1 0 011-1h8a1 1 0 110 2H6a1 1 0 01-1-1zm0 4a1 1 0 011-1h8a1 1 0 110 2H6a1 1 0 01-1-1z"/></svg>
+          </button>` : ''}
           <button class="action-btn" title="Editar" onclick="editarProveedor(${p.id})">
             <svg viewBox="0 0 20 20" fill="currentColor"><path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/></svg>
           </button>
@@ -256,6 +313,117 @@ async function pedirEliminar(id) {
   
   Toast.success('Proveedor eliminado');
   await cargarProveedores();
+}
+
+function cerrarCatalogo() {
+  document.getElementById('catalogoOverlay').classList.remove('modal-overlay--open');
+  catalogoProveedorId = null;
+}
+
+document.getElementById('catalogoOverlay').addEventListener('click', e => {
+  if (e.target.id === 'catalogoOverlay') cerrarCatalogo();
+});
+
+async function abrirCatalogo(id) {
+  if (!Auth.isAdmin()) {
+    Toast.warning('Solo el Administrador puede administrar catálogos de proveedores');
+    return;
+  }
+
+  const proveedor = todosLosProveedores.find(p => p.id === id);
+  if (!proveedor) return;
+  catalogoProveedorId = id;
+  document.getElementById('catalogoTitulo').textContent = `Catálogo de ${proveedor.nombre}`;
+  document.getElementById('buscarPlatosProveedor').value = '';
+  document.getElementById('buscarDecoracionesProveedor').value = '';
+  document.getElementById('catPlatosBody').innerHTML = emptyState('Cargando platos...');
+  document.getElementById('catDecoracionesBody').innerHTML = emptyState('Cargando decoraciones...');
+  document.getElementById('catalogoOverlay').classList.add('modal-overlay--open');
+
+  const [opcionesRes, actualesRes] = await Promise.all([
+    proveedoresService.getCatalogoOpciones(),
+    proveedoresService.getCatalogosProveedor(id),
+  ]);
+
+  if (opcionesRes.error || actualesRes.error) {
+    Toast.error('No se pudo cargar el catálogo del proveedor');
+    return;
+  }
+
+  platosCatalogoOpciones = opcionesRes.data?.platos || [];
+  decoracionesCatalogoOpciones = opcionesRes.data?.decoraciones || [];
+  proveedorPlatosActuales = actualesRes.data?.platos || [];
+  proveedorDecoracionesActuales = actualesRes.data?.decoraciones || [];
+  renderCatalogoProveedor();
+}
+
+function renderCatalogoProveedor() {
+  const platosTxt = (document.getElementById('buscarPlatosProveedor').value || '').toLowerCase();
+  const decorTxt = (document.getElementById('buscarDecoracionesProveedor').value || '').toLowerCase();
+  const platosMap = new Map(proveedorPlatosActuales.map(p => [Number(p.plato_id), p]));
+  const decorMap = new Map(proveedorDecoracionesActuales.map(d => [Number(d.decoracion_id), d]));
+
+  const platos = platosCatalogoOpciones.filter(p =>
+    `${p.nombre || ''} ${p.categoria || ''} ${p.descripcion || ''}`.toLowerCase().includes(platosTxt)
+  );
+  const decoraciones = decoracionesCatalogoOpciones.filter(d =>
+    `${d.nombre || ''} ${d.tipo || ''} ${d.descripcion || ''}`.toLowerCase().includes(decorTxt)
+  );
+
+  document.getElementById('catPlatosBody').innerHTML = platos.length ? platos.map(p => {
+    const actual = platosMap.get(Number(p.id));
+    const precio = actual?.precio_referencial ?? p.precio_referencial ?? '';
+    return `
+      <tr data-plato-id="${p.id}">
+        <td><input type="checkbox" class="cat-plato-activo" ${actual?.activo !== false && actual ? 'checked' : ''}/></td>
+        <td><strong>${escHtml(p.nombre)}</strong><br><span style="color:var(--txt-muted);font-size:12px">${escHtml(p.categoria || '')}</span></td>
+        <td><input class="form-input cat-plato-precio" type="number" min="0" step="0.01" value="${escHtml(String(precio))}" style="min-width:90px"/></td>
+        <td><input class="form-input cat-plato-notas" value="${escHtml(actual?.notas || '')}" placeholder="Notas"/></td>
+      </tr>`;
+  }).join('') : emptyState('No se encontraron platos.');
+
+  document.getElementById('catDecoracionesBody').innerHTML = decoraciones.length ? decoraciones.map(d => {
+    const actual = decorMap.get(Number(d.id));
+    const costo = actual?.costo_referencial ?? d.costo_referencial ?? '';
+    return `
+      <tr data-decoracion-id="${d.id}">
+        <td><input type="checkbox" class="cat-decoracion-activo" ${actual?.activo !== false && actual ? 'checked' : ''}/></td>
+        <td><strong>${escHtml(d.nombre)}</strong><br><span style="color:var(--txt-muted);font-size:12px">${escHtml(d.tipo || '')}</span></td>
+        <td><input class="form-input cat-decoracion-costo" type="number" min="0" step="0.01" value="${escHtml(String(costo))}" style="min-width:90px"/></td>
+        <td><input class="form-input cat-decoracion-notas" value="${escHtml(actual?.notas || '')}" placeholder="Notas"/></td>
+      </tr>`;
+  }).join('') : emptyState('No se encontraron decoraciones.');
+}
+
+async function guardarCatalogoProveedor() {
+  if (!catalogoProveedorId) return;
+
+  const platos = [...document.querySelectorAll('#catPlatosBody tr[data-plato-id]')]
+    .filter(row => row.querySelector('.cat-plato-activo').checked)
+    .map(row => ({
+      plato_id: row.dataset.platoId,
+      precio_referencial: row.querySelector('.cat-plato-precio').value,
+      activo: true,
+      notas: row.querySelector('.cat-plato-notas').value,
+    }));
+
+  const decoraciones = [...document.querySelectorAll('#catDecoracionesBody tr[data-decoracion-id]')]
+    .filter(row => row.querySelector('.cat-decoracion-activo').checked)
+    .map(row => ({
+      decoracion_id: row.dataset.decoracionId,
+      costo_referencial: row.querySelector('.cat-decoracion-costo').value,
+      activo: true,
+      notas: row.querySelector('.cat-decoracion-notas').value,
+    }));
+
+  const { error } = await proveedoresService.actualizarCatalogosProveedor(catalogoProveedorId, { platos, decoraciones });
+  if (error) {
+    Toast.error('No se pudo guardar el catálogo: ' + error);
+    return;
+  }
+
+  Toast.success('Catálogo del proveedor actualizado ✓');
+  cerrarCatalogo();
 }
 
 function exportarCSV() {

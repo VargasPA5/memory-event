@@ -97,8 +97,9 @@ export const getEventoDetalle = async (eventoId) => {
     agendaRaw,
     platosRaw,
     decoracionesRaw,
-    platosCatalogo,
-    decoracionesCatalogo,
+    proveedorPlatos,
+    proveedorDecoraciones,
+    proveedoresCatalogo,
   ] = await Promise.all([
     rpc('fn_calendario_evento_resumen', { p_evento_id: eventoId }),
     rpc('fn_calendario_evento_proveedores', { p_evento_id: eventoId }),
@@ -110,13 +111,36 @@ export const getEventoDetalle = async (eventoId) => {
     rpc('fn_calendario_evento_historial', { p_evento_id: eventoId }),
     rpc('fn_calendario_evento_anexos', { p_evento_id: eventoId }),
     supabase.from('evento_agenda').select('id, evento_proveedor_id').eq('evento_id', eventoId),
-    supabase.from('evento_platos').select('id, plato_id').eq('evento_id', eventoId),
-    supabase.from('evento_decoraciones').select('id, decoracion_id').eq('evento_id', eventoId),
-    supabase.from('platos').select('id, nombre, categoria, precio_referencial, estado').eq('estado', 'Activo').order('nombre'),
-    supabase.from('decoraciones').select('id, nombre, tipo, costo_referencial, estado').eq('estado', 'Activo').order('nombre'),
+    supabase.from('evento_platos').select('id, plato_id, evento_proveedor_id').eq('evento_id', eventoId),
+    supabase.from('evento_decoraciones').select('id, decoracion_id, evento_proveedor_id').eq('evento_id', eventoId),
+    supabase
+      .from('proveedor_platos')
+      .select(`
+        id,
+        proveedor_id,
+        plato_id,
+        precio_referencial,
+        activo,
+        plato:platos (id, nombre, categoria, precio_referencial, estado)
+      `)
+      .eq('activo', true)
+      .order('id'),
+    supabase
+      .from('proveedor_decoraciones')
+      .select(`
+        id,
+        proveedor_id,
+        decoracion_id,
+        costo_referencial,
+        activo,
+        decoracion:decoraciones (id, nombre, tipo, costo_referencial, estado)
+      `)
+      .eq('activo', true)
+      .order('id'),
+    supabase.from('proveedores').select('id, nombre, tipo, estado').eq('estado', 'Activo').order('nombre'),
   ]);
 
-  const error = [resumen, proveedores, checklist, agenda, platos, decoraciones, comentarios, historial, anexos, agendaRaw, platosRaw, decoracionesRaw, platosCatalogo, decoracionesCatalogo]
+  const error = [resumen, proveedores, checklist, agenda, platos, decoraciones, comentarios, historial, anexos, agendaRaw, platosRaw, decoracionesRaw, proveedorPlatos, proveedorDecoraciones, proveedoresCatalogo]
     .find(r => r.error)?.error || null;
 
   if (error) return { data: null, error };
@@ -125,6 +149,27 @@ export const getEventoDetalle = async (eventoId) => {
   const agendaIds = byId(agendaRaw.data || []);
   const platoIds = byId(platosRaw.data || []);
   const decoracionIds = byId(decoracionesRaw.data || []);
+  const proveedorIdsEvento = new Set((proveedores.data || []).map(p => Number(p.proveedor_id)));
+
+  const platosCatalogo = (proveedorPlatos.data || [])
+    .filter(row => proveedorIdsEvento.has(Number(row.proveedor_id)) && row.plato?.estado === 'Activo')
+    .map(row => ({
+      id: row.plato_id,
+      proveedor_id: row.proveedor_id,
+      nombre: row.plato?.nombre || '',
+      categoria: row.plato?.categoria || '',
+      precio_referencial: row.precio_referencial ?? row.plato?.precio_referencial ?? 0,
+    }));
+
+  const decoracionesCatalogo = (proveedorDecoraciones.data || [])
+    .filter(row => proveedorIdsEvento.has(Number(row.proveedor_id)) && row.decoracion?.estado === 'Activo')
+    .map(row => ({
+      id: row.decoracion_id,
+      proveedor_id: row.proveedor_id,
+      nombre: row.decoracion?.nombre || '',
+      tipo: row.decoracion?.tipo || '',
+      costo_referencial: row.costo_referencial ?? row.decoracion?.costo_referencial ?? 0,
+    }));
 
   return {
     data: {
@@ -132,14 +177,23 @@ export const getEventoDetalle = async (eventoId) => {
       proveedores: proveedores.data || [],
       checklist: checklist.data || [],
       agenda: (agenda.data || []).map(row => ({ ...row, evento_proveedor_id: agendaIds.get(Number(row.id))?.evento_proveedor_id || '' })),
-      platos: (platos.data || []).map(row => ({ ...row, plato_id: platoIds.get(Number(row.id))?.plato_id || '' })),
-      decoraciones: (decoraciones.data || []).map(row => ({ ...row, decoracion_id: decoracionIds.get(Number(row.id))?.decoracion_id || '' })),
+      platos: (platos.data || []).map(row => ({
+        ...row,
+        plato_id: platoIds.get(Number(row.id))?.plato_id || '',
+        evento_proveedor_id: platoIds.get(Number(row.id))?.evento_proveedor_id || row.evento_proveedor_id || '',
+      })),
+      decoraciones: (decoraciones.data || []).map(row => ({
+        ...row,
+        decoracion_id: decoracionIds.get(Number(row.id))?.decoracion_id || '',
+        evento_proveedor_id: decoracionIds.get(Number(row.id))?.evento_proveedor_id || row.evento_proveedor_id || '',
+      })),
       comentarios: comentarios.data || [],
       historial: historial.data || [],
       anexos: anexos.data || [],
       catalogos: {
-        platos: platosCatalogo.data || [],
-        decoraciones: decoracionesCatalogo.data || [],
+        proveedores: proveedoresCatalogo.data || [],
+        platos: platosCatalogo,
+        decoraciones: decoracionesCatalogo,
       },
     },
     error: null,
@@ -169,6 +223,41 @@ export const getOpcionesFiltros = async () => {
 };
 
 /* ── Edición de operación del evento ───────────────────────────────────── */
+
+export const asociarProveedor = async (eventoId, campos) => {
+  const payload = {
+    evento_id: Number(eventoId),
+    proveedor_id: Number(campos.proveedor_id),
+    servicio_contratado: String(campos.servicio_contratado || '').trim(),
+    costo: campos.costo === '' || campos.costo == null ? null : Number(campos.costo),
+    estado: campos.estado || 'Pendiente',
+    notas: campos.notas?.trim() || null,
+  };
+  if (!payload.proveedor_id) return { data: null, error: 'Selecciona un proveedor' };
+
+  const { data, error } = await supabase.from('evento_proveedores').insert(payload).select().single();
+  if (error) return { data: null, error: _err(error, 'asociarProveedor') };
+  return { data, error: null };
+};
+
+export const actualizarProveedorEvento = async (id, campos) => {
+  const payload = {
+    servicio_contratado: String(campos.servicio_contratado || '').trim(),
+    costo: campos.costo === '' || campos.costo == null ? null : Number(campos.costo),
+    estado: campos.estado || 'Pendiente',
+    notas: campos.notas?.trim() || null,
+  };
+
+  const { data, error } = await supabase.from('evento_proveedores').update(payload).eq('id', id).select().single();
+  if (error) return { data: null, error: _err(error, `actualizarProveedorEvento(${id})`) };
+  return { data, error: null };
+};
+
+export const desasociarProveedor = async (id) => {
+  const { error } = await supabase.from('evento_proveedores').delete().eq('id', id);
+  if (error) return { data: null, error: _err(error, `desasociarProveedor(${id})`) };
+  return { data: true, error: null };
+};
 
 export const crearChecklist = async (eventoId, descripcion) => {
   const payload = { evento_id: Number(eventoId), descripcion: String(descripcion || '').trim() };
@@ -236,6 +325,7 @@ export const eliminarAgenda = async (id) => {
 export const asociarPlato = async (eventoId, campos) => {
   const payload = {
     evento_id: Number(eventoId),
+    evento_proveedor_id: nullableNumber(campos.evento_proveedor_id),
     plato_id: Number(campos.plato_id),
     cantidad: positiveInt(campos.cantidad),
     precio_unitario: positiveNumber(campos.precio_unitario),
@@ -269,6 +359,7 @@ export const desasociarPlato = async (id) => {
 export const asociarDecoracion = async (eventoId, campos) => {
   const payload = {
     evento_id: Number(eventoId),
+    evento_proveedor_id: nullableNumber(campos.evento_proveedor_id),
     decoracion_id: Number(campos.decoracion_id),
     cantidad: positiveInt(campos.cantidad),
     costo_unitario: positiveNumber(campos.costo_unitario),
