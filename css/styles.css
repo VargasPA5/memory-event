@@ -1973,3 +1973,241 @@ html[data-theme="dark"] .report-table td {
 html[data-theme="dark"] .cal-cell {
   background: rgba(28,27,24,.72);
 }
+
+/* ===== MODULE-SPECIFIC UI/UX LAYER =========================================
+   Identidad visual por módulo. Solo usa clases en <body>; no toca lógica. */
+.app-page {
+  --module-accent: var(--accent);
+  --module-accent-rgb: 201,163,90;
+  --module-icon: "◆";
+}
+
+.app-page--dashboard { --module-accent:#c9a35a; --module-accent-rgb:201,163,90; --module-icon:"◈"; }
+.app-page--calendario { --module-accent:#3b82f6; --module-accent-rgb:59,130,246; --module-icon:"▣"; }
+.app-page--clientes { --module-accent:#14b8a6; --module-accent-rgb:20,184,166; --module-icon:"◉"; }
+.app-page--eventos { --module-accent:#8b5cf6; --module-accent-rgb:139,92,246; --module-icon:"✦"; }
+.app-page--reservas { --module-accent:#f59e0b; --module-accent-rgb:245,158,11; --module-icon:"◆"; }
+.app-page--ingresos { --module-accent:#10b981; --module-accent-rgb:16,185,129; --module-icon:"●"; }
+.app-page--gastos { --module-accent:#ef4444; --module-accent-rgb:239,68,68; --module-icon:"◒"; }
+.app-page--proveedores { --module-accent:#6366f1; --module-accent-rgb:99,102,241; --module-icon:"◇"; }
+.app-page--platos { --module-accent:#f97316; --module-accent-rgb:249,115,22; --module-icon:"◌"; }
+.app-page--decoraciones { --module-accent:#ec4899; --module-accent-rgb:236,72,153; --module-icon:"✧"; }
+.app-page--usuarios { --module-accent:#0ea5e9; --module-accent-rgb:14,165,233; --module-icon:"◎"; }
+.app-page--reportes { --module-accent:#64748b; --module-accent-rgb:100,116,139; --module-icon:"▤"; }
+.app-page--configuracion { --module-accent:#78716c; --module-accent-rgb:120,113,108; --module-icon:"⚙"; }
+.app-page--perfil { --module-accent:#c9a35a; --module-accent-rgb:201,163,90; --module-icon:"◉"; }
+
+.app-page .page-header {
+  position: relative;
+  padding: 22px 24px;
+  border: 1px solid rgba(var(--module-accent-rgb), .16);
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(var(--module-accent-rgb), .13), transparent 24rem),
+    linear-gradient(135deg, rgba(255,255,255,.92), rgba(255,255,255,.66));
+  box-shadow: var(--shadow-small);
+  overflow: hidden;
+}
+
+.app-page .page-header::before {
+  content: var(--module-icon);
+  width: 44px;
+  height: 44px;
+  border-radius: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(var(--module-accent-rgb), .12);
+  color: var(--module-accent);
+  font-size: 19px;
+  font-weight: 800;
+  flex: 0 0 auto;
+  box-shadow: inset 0 0 0 1px rgba(var(--module-accent-rgb), .16);
+}
+
+.app-page .page-header > div:first-child {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 14px;
+  align-items: center;
+}
+
+.app-page .page-header > div:first-child h1,
+.app-page .page-header > div:first-child p {
+  grid-column: 2;
+}
+
+.app-page .page-header > div:first-child h1 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.app-page .storage-indicator {
+  background: rgba(var(--module-accent-rgb), .09);
+  border: 1px solid rgba(var(--module-accent-rgb), .13);
+  color: var(--text-soft);
+  padding: 4px 9px;
+  border-radius: 999px;
+}
+
+.app-page .kpi-grid {
+  align-items: stretch;
+}
+
+.app-page .kpi-card {
+  border-color: rgba(var(--module-accent-rgb), .10);
+}
+
+.app-page .kpi-card:hover {
+  border-color: rgba(var(--module-accent-rgb), .22);
+}
+
+.app-page .kpi-card::after {
+  background: rgba(var(--module-accent-rgb), .08);
+}
+
+.app-page .toolbar {
+  background: rgba(255,255,255,.72);
+  border: 1px solid var(--border-soft);
+  border-radius: 18px;
+  padding: 12px;
+  box-shadow: var(--shadow-small);
+}
+
+.app-page .toolbar .search-box {
+  flex: 1 1 280px;
+  max-width: 430px;
+}
+
+.app-page .toolbar .filter-select {
+  min-width: 170px;
+}
+
+.app-page .tbl-wrap {
+  box-shadow: var(--shadow-medium);
+}
+
+.app-page .tbl th:first-child,
+.app-page .report-table th:first-child {
+  padding-left: 22px;
+}
+
+.app-page .tbl td:first-child,
+.app-page .report-table td:first-child {
+  padding-left: 22px;
+}
+
+.app-page .item-cell-name,
+.app-page .event-item-name,
+.app-page .income-ref {
+  color: var(--text-strong);
+  letter-spacing: -.01em;
+}
+
+.app-page .link-sm {
+  color: var(--module-accent);
+}
+
+.app-page .btn--primary {
+  background: linear-gradient(135deg, var(--module-accent), var(--module-accent));
+  color: #fff;
+  box-shadow: 0 10px 24px rgba(var(--module-accent-rgb), .22);
+}
+
+.app-page--reservas .btn--primary,
+.app-page--platos .btn--primary,
+.app-page--dashboard .btn--primary {
+  color: #17120a;
+}
+
+.app-page .btn--outline:hover,
+.app-page .action-btn:hover,
+.app-page .cal-nav-btn:hover {
+  border-color: rgba(var(--module-accent-rgb), .42);
+  color: var(--module-accent);
+  background: rgba(var(--module-accent-rgb), .08);
+}
+
+.app-page .pag-btn.active,
+.app-page .cal-tab.active,
+.app-page .tab-btn.active {
+  background: rgba(var(--module-accent-rgb), .13);
+  color: var(--module-accent);
+  border-color: rgba(var(--module-accent-rgb), .24);
+}
+
+.app-page .form-input:focus,
+.app-page .form-select:focus,
+.app-page .form-textarea:focus,
+.app-page .search-box:focus-within,
+.app-page .filter-select:focus {
+  border-color: rgba(var(--module-accent-rgb), .55);
+  box-shadow: 0 0 0 4px rgba(var(--module-accent-rgb), .14);
+}
+
+.app-page .modal-header h3::before {
+  content: var(--module-icon);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  margin-right: 8px;
+  border-radius: 10px;
+  background: rgba(var(--module-accent-rgb), .10);
+  color: var(--module-accent);
+  font-size: 13px;
+  vertical-align: middle;
+}
+
+.app-page--calendario .cal-nav-bar {
+  border-color: rgba(var(--module-accent-rgb), .18);
+}
+
+.app-page--calendario .cal-wrap {
+  border-color: rgba(var(--module-accent-rgb), .14);
+}
+
+.app-page--reportes .reportes-grid {
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
+.app-page--perfil .profile-hero,
+.app-page--configuracion .conf-layout > .card {
+  border-color: rgba(var(--module-accent-rgb), .14);
+}
+
+@media (max-width: 768px) {
+  .app-page .page-header {
+    padding: 18px;
+    align-items: flex-start;
+  }
+  .app-page .page-header > div:first-child {
+    grid-template-columns: auto minmax(0,1fr);
+  }
+  .app-page .page-header::before {
+    width: 38px;
+    height: 38px;
+    border-radius: 14px;
+  }
+  .app-page .toolbar {
+    align-items: stretch;
+  }
+  .app-page .toolbar .search-box,
+  .app-page .toolbar .filter-select,
+  .app-page .toolbar-right {
+    width: 100%;
+    max-width: none;
+  }
+}
+
+html[data-theme="dark"] .app-page .page-header {
+  background:
+    radial-gradient(circle at 100% 0%, rgba(var(--module-accent-rgb), .16), transparent 24rem),
+    linear-gradient(135deg, rgba(28,27,24,.94), rgba(28,27,24,.70));
+}
+
+html[data-theme="dark"] .app-page .toolbar {
+  background: rgba(28,27,24,.72);
+}
