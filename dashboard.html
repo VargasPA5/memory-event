@@ -1,9 +1,9 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Memory – Dashboard</title>
+  <title>Memory - Dashboard</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Dancing+Script:wght@700&display=swap" rel="stylesheet"/>
@@ -19,11 +19,11 @@
 
       <div class="page-header">
         <div>
-          <h1 id="greetTitle">Dashboard</h1>
-          <p id="greetSub">Bienvenido, <strong>Administrador</strong>. Aquí tienes un resumen de tu negocio.</p>
+          <h1 id="greetTitle">Dashboard <span class="storage-indicator"><span class="storage-dot" id="dashboardDot"></span><span id="dashboardStatus">Cargando...</span></span></h1>
+          <p id="greetSub">Bienvenido. Aqui tienes un resumen de tu negocio.</p>
         </div>
         <div class="page-actions">
-          <a href="eventos.html" class="btn btn--outline">
+          <a href="calendario.html" class="btn btn--outline">
             <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd"/></svg>
             Calendario
           </a>
@@ -34,80 +34,48 @@
         </div>
       </div>
 
-      <!-- KPIs dinámicos -->
       <div class="kpi-grid" id="kpiGrid">
         <div class="kpi-card">
-          <div class="kpi-top">
-            <div class="kpi-icon kpi-icon--blue">
-              <svg viewBox="0 0 20 20" fill="currentColor"><path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v1h8v-1z"/></svg>
-            </div>
-          </div>
-          <div class="kpi-bottom">
-            <div class="kpi-value" id="k-clientes">—</div>
-            <div class="kpi-label">Clientes</div>
-            <div class="kpi-trend up" id="k-clientes-trend"></div>
-          </div>
+          <div class="kpi-top"><div class="kpi-icon kpi-icon--green"><svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd"/></svg></div></div>
+          <div class="kpi-bottom"><div class="kpi-value" id="k-eventos-proximos">-</div><div class="kpi-label">Eventos Próximos</div><div class="kpi-trend up" id="k-eventos-proximos-trend">Próximos 30 días</div></div>
         </div>
         <div class="kpi-card">
-          <div class="kpi-top">
-            <div class="kpi-icon kpi-icon--green">
-              <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd"/></svg>
-            </div>
-          </div>
-          <div class="kpi-bottom">
-            <div class="kpi-value" id="k-eventos">—</div>
-            <div class="kpi-label">Eventos</div>
-            <div class="kpi-trend up" id="k-eventos-trend"></div>
-          </div>
+          <div class="kpi-top"><div class="kpi-icon kpi-icon--yellow"><svg viewBox="0 0 20 20" fill="currentColor"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/><path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5z" clip-rule="evenodd"/></svg></div></div>
+          <div class="kpi-bottom"><div class="kpi-value" id="k-reservas">-</div><div class="kpi-label">Reservas Confirmadas</div><div class="kpi-trend up" id="k-reservas-trend">En el periodo</div></div>
         </div>
         <div class="kpi-card">
-          <div class="kpi-top">
-            <div class="kpi-icon kpi-icon--yellow">
-              <svg viewBox="0 0 20 20" fill="currentColor"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/><path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5z" clip-rule="evenodd"/></svg>
-            </div>
-          </div>
-          <div class="kpi-bottom">
-            <div class="kpi-value" id="k-reservas">—</div>
-            <div class="kpi-label">Reservas</div>
-            <div class="kpi-trend up" id="k-reservas-trend"></div>
-          </div>
+          <div class="kpi-top"><div class="kpi-icon kpi-icon--indigo"><svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-13a1 1 0 10-2 0v.092a4.535 4.535 0 00-1.676.662C6.602 6.234 6 7.009 6 8c0 .99.602 1.765 1.324 2.246.48.32 1.054.545 1.676.662v1.941c-.391-.127-.68-.317-.843-.504a1 1 0 10-1.51 1.31c.562.649 1.413 1.077 2.353 1.253V15a1 1 0 102 0v-.092a4.535 4.535 0 001.676-.662C13.398 13.766 14 12.991 14 12c0-.99-.602-1.765-1.324-2.246A4.535 4.535 0 0011 9.092V7.151c.391.127.68.317.843.504a1 1 0 101.511-1.31c-.563-.649-1.413-1.077-2.354-1.253V5z" clip-rule="evenodd"/></svg></div></div>
+          <div class="kpi-bottom"><div class="kpi-value" id="k-ingresos">-</div><div class="kpi-label">Ingresos Cobrados</div><div class="kpi-trend up" id="k-ingresos-trend">Pagos confirmados</div></div>
         </div>
         <div class="kpi-card">
-          <div class="kpi-top">
-            <div class="kpi-icon kpi-icon--indigo">
-              <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-13a1 1 0 10-2 0v.092a4.535 4.535 0 00-1.676.662C6.602 6.234 6 7.009 6 8c0 .99.602 1.765 1.324 2.246.48.32 1.054.545 1.676.662v1.941c-.391-.127-.68-.317-.843-.504a1 1 0 10-1.51 1.31c.562.649 1.413 1.077 2.353 1.253V15a1 1 0 102 0v-.092a4.535 4.535 0 001.676-.662C13.398 13.766 14 12.991 14 12c0-.99-.602-1.765-1.324-2.246A4.535 4.535 0 0011 9.092V7.151c.391.127.68.317.843.504a1 1 0 101.511-1.31c-.563-.649-1.413-1.077-2.354-1.253V5z" clip-rule="evenodd"/></svg>
-            </div>
-          </div>
-          <div class="kpi-bottom">
-            <div class="kpi-value" id="k-ingresos">—</div>
-            <div class="kpi-label">Ingresos Cobrados</div>
-            <div class="kpi-trend up" id="k-ingresos-trend"></div>
-          </div>
+          <div class="kpi-top"><div class="kpi-icon kpi-icon--orange"><svg viewBox="0 0 20 20" fill="currentColor"><path d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm3 1a1 1 0 000 2h6a1 1 0 100-2H7zm0 4a1 1 0 100 2h6a1 1 0 100-2H7zm0 4a1 1 0 100 2h3a1 1 0 100-2H7z"/></svg></div></div>
+          <div class="kpi-bottom"><div class="kpi-value" id="k-gastos">-</div><div class="kpi-label">Gastos Pagados</div><div class="kpi-trend neutral" id="k-gastos-trend">Costos del periodo</div></div>
         </div>
         <div class="kpi-card">
-          <div class="kpi-top">
-            <div class="kpi-icon kpi-icon--orange">
-              <svg viewBox="0 0 20 20" fill="currentColor"><path d="M8 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM15 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z"/><path d="M3 4a1 1 0 00-1 1v10a1 1 0 001 1h1.05a2.5 2.5 0 014.9 0H10a1 1 0 001-1V5a1 1 0 00-1-1H3zM14 7a1 1 0 00-1 1v6.05A2.5 2.5 0 0115.95 16H17a1 1 0 001-1v-5a1 1 0 00-.293-.707l-2-2A1 1 0 0015 7h-1z"/></svg>
-            </div>
-          </div>
-          <div class="kpi-bottom">
-            <div class="kpi-value" id="k-proveedores">—</div>
-            <div class="kpi-label">Proveedores Activos</div>
-            <div class="kpi-trend neutral">Registrados</div>
-          </div>
+          <div class="kpi-top"><div class="kpi-icon kpi-icon--blue"><svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg></div></div>
+          <div class="kpi-bottom"><div class="kpi-value" id="k-utilidad">-</div><div class="kpi-label">Utilidad Estimada</div><div class="kpi-trend up" id="k-utilidad-trend">Ingresos menos gastos</div></div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-top"><div class="kpi-icon kpi-icon--yellow"><svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"/></svg></div></div>
+          <div class="kpi-bottom"><div class="kpi-value" id="k-saldo">-</div><div class="kpi-label">Saldo Pendiente</div><div class="kpi-trend neutral" id="k-saldo-trend">Reservas activas</div></div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-top"><div class="kpi-icon kpi-icon--blue"><svg viewBox="0 0 20 20" fill="currentColor"><path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v1h8v-1z"/></svg></div></div>
+          <div class="kpi-bottom"><div class="kpi-value" id="k-clientes">-</div><div class="kpi-label">Clientes Nuevos</div><div class="kpi-trend up" id="k-clientes-trend">Altas del periodo</div></div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-top"><div class="kpi-icon kpi-icon--green"><svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h5.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm7 0v3a1 1 0 001 1h3l-4-4z" clip-rule="evenodd"/></svg></div></div>
+          <div class="kpi-bottom"><div class="kpi-value" id="k-boletas">-</div><div class="kpi-label">Boletas Emitidas</div><div class="kpi-trend neutral" id="k-boletas-trend">Documentos del periodo</div></div>
         </div>
       </div>
 
-      <!-- Gráficos -->
       <div class="charts-row">
         <div class="card">
           <div class="card-header">
-            <h3>Ingresos por Mes</h3>
-            <span class="link-sm" id="periodoLabel">Últimos 6 meses</span>
+            <h3>Ingresos vs Gastos</h3>
+            <span class="link-sm" id="periodoLabel">Ultimos 6 meses</span>
           </div>
-          <div class="card-body">
-            <div class="chart-area"><canvas id="incomeChart"></canvas></div>
-          </div>
+          <div class="card-body"><div class="chart-area"><canvas id="incomeChart"></canvas></div></div>
         </div>
 
         <div class="card">
@@ -120,221 +88,101 @@
 
         <div class="card">
           <div class="card-header"><h3>Reservas por Estado</h3></div>
-          <div class="card-body">
-            <div class="donut-wrap"><canvas id="donutChart" style="max-height:160px"></canvas></div>
-          </div>
+          <div class="card-body"><div class="donut-wrap"><canvas id="donutChart" style="max-height:160px"></canvas></div></div>
           <div class="legend" id="donutLegend"></div>
         </div>
       </div>
 
-      <!-- Tablas -->
       <div style="display:grid;grid-template-columns:1.6fr 1fr;gap:16px">
         <div class="card">
           <div class="card-header">
-            <h3>Reservas Recientes</h3>
+            <h3>Reservas Próximas</h3>
             <a href="reservas.html" class="link-sm">Ver todas</a>
           </div>
           <table class="tbl">
-            <thead><tr><th>Cliente</th><th>Evento</th><th>Fecha</th><th>Estado</th><th>Total</th></tr></thead>
+            <thead><tr><th>Cliente</th><th>Evento</th><th>Fecha</th><th>Estado</th><th>Saldo</th></tr></thead>
             <tbody id="recentReservas"></tbody>
           </table>
         </div>
         <div class="card">
           <div class="card-header">
-            <h3>Ingresos Recientes</h3>
-            <a href="ingresos.html" class="link-sm">Ver todos</a>
+            <h3>Actividad Reciente</h3>
+            <a href="ingresos.html" class="link-sm">Ver pagos</a>
           </div>
           <div class="income-list" id="recentIngresos"></div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr;gap:16px;margin-top:16px">
+        <div class="card">
+          <div class="card-header">
+            <h3>Clientes</h3>
+            <a href="clientes.html" class="link-sm">Ver clientes</a>
+          </div>
+          <div class="legend" id="clientesResumen" style="padding-top:16px"></div>
         </div>
       </div>
 
     </div>
   </main>
 </div>
+
 <div id="toast-container"></div>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="js/storage.js"></script>
 <script src="js/auth.js"></script>
-<script src="js/data.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/app.js"></script>
-<script>
-/* ── Dashboard ─────────────────────────────────────────────────────── */
-(function() {
-  const usr = Auth.get();
-  if (usr) {
-    document.getElementById('greetSub').innerHTML = `Bienvenido, <strong>${escHtml(usr.nombre)}</strong>. Aquí tienes un resumen de tu negocio.`;
+<script type="module">
+import * as dashboardService from './js/services/dashboardService.js';
+import { renderIncomeChart, renderReservasChart, bindChartThemeRefresh } from './js/dashboard/dashboardCharts.js';
+import { createDashboardRealtime } from './js/dashboard/dashboardRealtime.js';
+import {
+  renderGreeting,
+  setLoading,
+  renderKpis,
+  renderClientesResumen,
+  renderEventosProximos,
+  renderReservasRecientes,
+  renderActividad,
+} from './js/dashboard/dashboardUi.js';
+
+let dashboardData = {
+  finanzas: [],
+  reservasEstado: [],
+};
+
+const realtime = createDashboardRealtime();
+
+async function cargarDashboard() {
+  setLoading(true);
+  const dot = document.getElementById('dashboardDot');
+  dot?.classList.add('saving');
+
+  const { data, error } = await dashboardService.getDashboard({ meses: 6 });
+  dot?.classList.remove('saving');
+  setLoading(false);
+
+  if (error) {
+    Toast.error('Error al cargar el Dashboard: ' + error);
+    return;
   }
 
-  const s = Data.stats();
+  dashboardData = data;
+  renderKpis(data.kpis);
+  renderIncomeChart(data.finanzas);
+  renderReservasChart(data.reservasEstado);
+  renderEventosProximos(data.eventosProximos);
+  renderReservasRecientes(data.reservasRecientes);
+  renderActividad(data.actividad);
+  renderClientesResumen(data.clientes);
+}
 
-  /* KPIs */
-  document.getElementById('k-clientes').textContent = s.clientes.total;
-  document.getElementById('k-clientes-trend').textContent = `${s.clientes.personas} personas · ${s.clientes.empresas} empresas`;
+renderGreeting();
+bindChartThemeRefresh(() => dashboardData);
+cargarDashboard();
 
-  document.getElementById('k-eventos').textContent = s.eventos.total;
-  document.getElementById('k-eventos-trend').textContent = `${s.eventos.confirmados} confirmados · ${s.eventos.pendientes} pendientes`;
-
-  document.getElementById('k-reservas').textContent = s.reservas.total;
-  document.getElementById('k-reservas-trend').textContent = `${s.reservas.confirmadas} confirmadas · ${s.reservas.canceladas} canceladas`;
-
-  document.getElementById('k-ingresos').textContent = Fmt.currencyShort(s.ingresos.total);
-  document.getElementById('k-ingresos-trend').textContent = `↑ Este mes: ${Fmt.currency(s.ingresos.esteMes)}`;
-
-  document.getElementById('k-proveedores').textContent = s.proveedores.activos;
-
-  /* ── Colores de gráficos según tema (ver js/theme.js) ────────────────── */
-  const chartTheme = () => {
-    const dark = Theme.get() === 'dark';
-    return {
-      grid:   dark ? '#252219' : '#ede9e2',
-      tick:   dark ? '#6a6560' : '#9a9890',
-      ringBg: dark ? '#1c1b18' : '#fff',
-      tooltip: { backgroundColor: dark ? '#100f0d' : '#1a1814', titleColor: '#eee8de', bodyColor: dark ? '#8a8478' : '#9a9890', padding: 10 },
-    };
-  };
-
-  let incomeChart, donutChartInst;
-
-  /* Gráfico de línea — ingresos */
-  const incCtx = document.getElementById('incomeChart');
-  const renderIncomeChart = () => {
-    if (!incCtx) return;
-    const ct = chartTheme();
-    incomeChart?.destroy();
-    incomeChart = new Chart(incCtx, {
-      type: 'line',
-      data: {
-        labels: s.ingresos.porMes.map(m => m.label),
-        datasets: [{
-          data: s.ingresos.porMes.map(m => m.total),
-          borderColor: '#c9a35a',
-          backgroundColor: 'rgba(201,163,90,.1)',
-          borderWidth: 2.5,
-          fill: true,
-          tension: 0.4,
-          pointRadius: 4,
-          pointBackgroundColor: '#c9a35a',
-          pointBorderColor: ct.ringBg,
-          pointBorderWidth: 2,
-          pointHoverRadius: 6,
-        }]
-      },
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { display: false }, tooltip: {
-          ...ct.tooltip,
-          callbacks: { label: ctx => ' ' + Fmt.currency(ctx.parsed.y) }
-        }},
-        scales: {
-          x: { grid: { display: false }, ticks: { color: ct.tick, font: { size: 11 } } },
-          y: { grid: { color: ct.grid }, ticks: { color: ct.tick, font: { size: 11 }, callback: v => Fmt.currencyShort(v) } }
-        }
-      }
-    });
-  };
-  renderIncomeChart();
-
-  /* Gráfico donut — reservas */
-  const donutCtx = document.getElementById('donutChart');
-  const re = s.reservas;
-  const colors = ['#c9a35a','#f59e0b','#ef4444'];
-  const renderDonutChart = () => {
-    if (!donutCtx || re.total <= 0) return;
-    const ct = chartTheme();
-    donutChartInst?.destroy();
-    donutChartInst = new Chart(donutCtx, {
-      type: 'doughnut',
-      data: {
-        labels: ['Confirmadas','Pendientes','Canceladas'],
-        datasets: [{ data: [re.confirmadas, re.pendientes, re.canceladas], backgroundColor: colors, borderColor: ct.ringBg, borderWidth: 3, hoverOffset: 5 }]
-      },
-      options: { responsive: true, maintainAspectRatio: true, cutout: '65%',
-        plugins: { legend: { display: false }, tooltip: ct.tooltip }
-      }
-    });
-  };
-  renderDonutChart();
-  Theme.onChange(() => { renderIncomeChart(); renderDonutChart(); });
-
-  if (donutCtx && re.total > 0) {
-    const labels = [['Confirmadas',re.confirmadas],['Pendientes',re.pendientes],['Canceladas',re.canceladas]];
-    const leg = document.getElementById('donutLegend');
-    labels.forEach(([l,n],i) => {
-      const div = document.createElement('div');
-      div.className = 'legend-item';
-      div.innerHTML = `<div class="legend-dot" style="background:${colors[i]}"></div><span>${escHtml(l)} ${n} (${re.total?Math.round(n/re.total*100):0}%)</span>`;
-      leg.appendChild(div);
-    });
-  }
-
-  /* Eventos próximos */
-  const MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
-  const eventos = Data.eventos.getAll()
-    .filter(e => e.estado !== 'Cancelado')
-    .sort((a,b) => new Date(a.fecha) - new Date(b.fecha))
-    .slice(0, 5);
-  const upcomEl = document.getElementById('upcomingEvents');
-  if (eventos.length === 0) {
-    upcomEl.innerHTML = '<div class="empty-state"><p>No hay eventos próximos</p></div>';
-  } else {
-    eventos.forEach(ev => {
-      const d = new Date(ev.fecha + 'T00:00:00');
-      const item = document.createElement('div');
-      item.className = 'event-item';
-      item.innerHTML = `
-        <div class="avatar-ini" style="background:#c9a35a;color:#1a1917;width:36px;height:36px;font-size:13px;border-radius:8px">${escHtml(ev.tipo.slice(0,2))}</div>
-        <div class="event-item-info">
-          <div class="event-item-name"></div>
-          <div class="event-item-date">📅 ${d.getDate()} ${MESES[d.getMonth()]} · ${ev.hora||''}</div>
-        </div>
-        ${badge(ev.estado)}`;
-      item.querySelector('.event-item-name').textContent = ev.nombre;
-      upcomEl.appendChild(item);
-    });
-  }
-
-  /* Reservas recientes */
-  const reservas = Data.reservas.getAll().slice(-5).reverse();
-  const resTbody = document.getElementById('recentReservas');
-  reservas.forEach(r => {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td><div class="client-cell">${avatarEl(Data.clienteNombre(r.clienteId), r.clienteId)}<span></span></div></td>
-      <td class="ev-nombre"></td>
-      <td>${Fmt.dateShort(r.fecha)}</td>
-      <td>${badge(r.estado)}</td>
-      <td><strong>${Fmt.currency(r.total)}</strong></td>`;
-    tr.querySelector('.client-cell span').textContent = Data.clienteNombre(r.clienteId);
-    tr.querySelector('.ev-nombre').textContent = Data.eventoNombre(r.eventoId);
-    resTbody.appendChild(tr);
-  });
-  if (!reservas.length) resTbody.innerHTML = emptyState('No hay reservas');
-
-  /* Ingresos recientes */
-  const ingresos = Data.ingresos.getAll().filter(i=>i.estado==='Pagado').slice(-4).reverse();
-  const ingEl = document.getElementById('recentIngresos');
-  ingresos.forEach(ing => {
-    const div = document.createElement('div');
-    div.className = 'income-item';
-    div.innerHTML = `
-      <div class="income-icon">
-        <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-13a1 1 0 10-2 0v.092a4.535 4.535 0 00-1.676.662C6.602 6.234 6 7.009 6 8c0 .99.602 1.765 1.324 2.246.48.32 1.054.545 1.676.662v1.941c-.391-.127-.68-.317-.843-.504a1 1 0 10-1.51 1.31c.562.649 1.413 1.077 2.353 1.253V15a1 1 0 102 0v-.092a4.535 4.535 0 001.676-.662C13.398 13.766 14 12.991 14 12c0-.99-.602-1.765-1.324-2.246A4.535 4.535 0 0011 9.092V7.151c.391.127.68.317.843.504a1 1 0 101.511-1.31c-.563-.649-1.413-1.077-2.354-1.253V5z" clip-rule="evenodd"/></svg>
-      </div>
-      <div class="income-info">
-        <div class="income-ref"></div>
-        <div class="income-client"></div>
-      </div>
-      <div class="income-right">
-        <div class="income-amount">${Fmt.currency(ing.monto)}</div>
-        <div class="income-date">${Fmt.dateShort(ing.fecha)}</div>
-      </div>`;
-    div.querySelector('.income-ref').textContent = ing.concepto || ing.codigo;
-    div.querySelector('.income-client').textContent = Data.clienteNombre(ing.clienteId);
-    ingEl.appendChild(div);
-  });
-  if (!ingresos.length) ingEl.innerHTML = '<div class="empty-state"><p>Sin ingresos registrados</p></div>';
-})();
+window.addEventListener('beforeunload', () => realtime.stop());
 </script>
 </body>
 </html>
