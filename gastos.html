@@ -147,8 +147,12 @@ let editandoId = null;
 let todosLosGastos = [];
 let eventosDisponibles = [];
 let proveedoresEvento = [];
+// Catálogo completo de proveedores activos, precargado una vez al iniciar
+// la página — así el datalist de "Buscar proveedor" muestra todos los
+// registrados desde que se abre el modal, sin esperar a que se escriban
+// 2 caracteres para recién ir a buscarlos a la base de datos.
+let proveedoresActivos = [];
 let proveedoresBusqueda = [];
-let proveedorSearchTimer = null;
 
 window.renderTabla = renderTabla;
 window.exportarCSV = exportarCSV;
@@ -224,24 +228,21 @@ function resolverProveedorBusqueda() {
   return proveedor || null;
 }
 
-async function buscarProveedores() {
+function buscarProveedores() {
+  // El datalist ya tiene el catálogo completo (ver cargarProveedoresActivos);
+  // el navegador filtra las opciones visibles por su cuenta a medida que se
+  // escribe. Acá solo se resuelve el id oculto si lo tipeado ya coincide
+  // exacto con algún proveedor de la lista.
   document.getElementById('fProveedorNuevo').value = '';
-  const query = document.getElementById('fProveedorBuscar').value.trim();
-  if (query.length < 2) {
-    proveedoresBusqueda = [];
-    poblarProveedorOptions();
-    return;
-  }
-
-  const { data, error } = await proveedoresService.buscar(query);
-  if (error) {
-    Toast.error('No se pudo buscar proveedores');
-    return;
-  }
-
-  proveedoresBusqueda = data || [];
-  poblarProveedorOptions();
   resolverProveedorBusqueda();
+}
+
+async function cargarProveedoresActivos() {
+  const { data, error } = await proveedoresService.getAll('Activo');
+  if (error) { console.warn('[gastos] No se pudo precargar proveedores:', error); return; }
+  proveedoresActivos = data || [];
+  proveedoresBusqueda = proveedoresActivos;
+  poblarProveedorOptions();
 }
 
 async function asegurarProveedorEvento(eventoId) {
@@ -285,8 +286,9 @@ async function onEventoChange() {
   document.getElementById('fProveedorBuscar').value = '';
   document.getElementById('fProveedorNuevo').value = '';
   document.getElementById('fServicioProveedor').value = '';
-  proveedoresBusqueda = [];
-  poblarProveedorOptions();
+  // El catálogo completo (proveedoresActivos/proveedoresBusqueda) NO se
+  // limpia acá: es independiente del evento elegido, cambiar de evento no
+  // debe vaciar el datalist de "Buscar proveedor".
 }
 
 function renderTabla() {
@@ -466,6 +468,7 @@ async function cargarDatos() {
   const [resGastos, resEventos] = await Promise.all([
     gastosService.getAll(),
     eventosService.getAll(),
+    cargarProveedoresActivos(),
   ]);
   if (resGastos.error) { Toast.error('Error al cargar gastos'); return; }
   if (resEventos.error) { Toast.error('Error al cargar eventos'); return; }
@@ -475,10 +478,7 @@ async function cargarDatos() {
 }
 
 sessionReady.then(cargarDatos);
-document.getElementById('fProveedorBuscar').addEventListener('input', () => {
-  clearTimeout(proveedorSearchTimer);
-  proveedorSearchTimer = setTimeout(buscarProveedores, 250);
-});
+document.getElementById('fProveedorBuscar').addEventListener('input', buscarProveedores);
 </script>
 </body>
 </html>
