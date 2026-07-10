@@ -136,6 +136,26 @@
     .login-error.show { display: flex; }
     .login-error svg { width: 16px; height: 16px; flex-shrink: 0; }
 
+    /* ── Success ───────────────────────────────────────────────────── */
+    .login-success {
+      display: none;
+      background: #ecfdf5;
+      border: 1px solid #a7f3d0;
+      border-radius: 13px;
+      padding: 10px 14px;
+      font-size: 13px;
+      color: #065f46;
+      margin-bottom: 18px;
+      align-items: center;
+      gap: 8px;
+    }
+    .login-success.show { display: flex; }
+    .login-success svg { width: 16px; height: 16px; flex-shrink: 0; }
+
+    /* ── Links auxiliares (olvidé mi contraseña / volver) ─────────────── */
+    .link-muted { font-size: 12.5px; color: #8a8478; text-decoration: none; font-weight: 600; cursor: pointer; }
+    .link-muted:hover { color: #b3893f; text-decoration: underline; }
+
     /* ── Form ──────────────────────────────────────────────────────── */
     .form-group { margin-bottom: 19px; }
     .form-group label {
@@ -242,12 +262,16 @@
         <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/></svg>
         <span id="loginErrorMsg"></span>
       </div>
+      <div id="loginSuccess" class="login-success">
+        <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+        <span id="loginSuccessMsg"></span>
+      </div>
 
       <div class="form-group">
         <label for="inputUser">Correo electrónico</label>
         <input type="email" id="inputUser" class="form-input" placeholder="Ej: usuario@empresa.com" autocomplete="username"/>
       </div>
-      <div class="form-group">
+      <div class="form-group" id="grupoPass">
         <label for="inputPass" id="labelPass">Contraseña</label>
         <div class="input-wrap">
           <input type="password" id="inputPass" class="form-input" placeholder="••••••••" autocomplete="current-password"/>
@@ -262,10 +286,18 @@
         <input type="password" id="inputConfirmar" class="form-input" placeholder="••••••••" autocomplete="new-password"/>
       </div>
 
+      <div id="linkOlvidoWrap" style="text-align:right;margin:-9px 0 18px">
+        <a href="#" id="linkOlvidoPassword" class="link-muted">¿Olvidaste tu contraseña?</a>
+      </div>
+
       <button class="btn-login" id="btnLogin">
         <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 3a1 1 0 011 1v12a1 1 0 11-2 0V4a1 1 0 011-1zm10.293 9.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L14.586 9H7a1 1 0 100 2h7.586l-1.293 1.293z" clip-rule="evenodd"/></svg>
         Iniciar sesión
       </button>
+
+      <div id="volverLoginWrap" style="display:none;text-align:center;margin-top:18px">
+        <a href="#" id="linkVolverLogin" class="link-muted">← Volver a iniciar sesión</a>
+      </div>
 
     </div>
   </div>
@@ -278,8 +310,9 @@
 <script type="module">
   import { supabase } from './js/supabaseClient.js';
 
-  /* ── Mostrar / limpiar error ──────────────────────────────────────── */
+  /* ── Mostrar / limpiar error y éxito ─────────────────────────────────── */
   function showError(msg) {
+    clearSuccess();
     const el = document.getElementById('loginError');
     document.getElementById('loginErrorMsg').textContent = msg;
     el.classList.add('show');
@@ -288,6 +321,15 @@
     document.getElementById('loginError').classList.remove('show');
     document.getElementById('inputUser').classList.remove('error');
     document.getElementById('inputPass').classList.remove('error');
+  }
+  function showSuccess(msg) {
+    clearError();
+    const el = document.getElementById('loginSuccess');
+    document.getElementById('loginSuccessMsg').textContent = msg;
+    el.classList.add('show');
+  }
+  function clearSuccess() {
+    document.getElementById('loginSuccess').classList.remove('show');
   }
 
   /* ── Login normal ─────────────────────────────────────────────────── */
@@ -323,6 +365,71 @@
     document.getElementById('eyeOff').style.display  = isText ? 'none' : '';
   });
 
+  /* ── Modo "recuperar contraseña" ──────────────────────────────────────
+     Reversible (a diferencia del modo invitación): el usuario puede volver
+     al login normal con el link "Volver a iniciar sesión". No usa un
+     sistema propio de recuperación: delega todo en
+     supabase.auth.resetPasswordForEmail(), el método nativo de Supabase
+     Auth. redirectTo apunta a reset-password.html, la página donde se
+     define la contraseña nueva una vez que el correo confirma el enlace. */
+  const RESET_PASSWORD_URL = 'https://vargaspa5.github.io/memory-event/reset-password.html';
+  let modoActual = 'login'; // 'login' | 'recuperar' — decide qué hace btnLogin al presionarlo
+
+  function activarModoRecuperar() {
+    modoActual = 'recuperar';
+    clearError(); clearSuccess();
+    document.querySelector('.card-title').textContent = 'Recuperar contraseña';
+    document.querySelector('.card-sub').textContent = 'Ingresa tu correo y te enviaremos un enlace para restablecerla';
+    document.getElementById('grupoPass').style.display = 'none';
+    document.getElementById('linkOlvidoWrap').style.display = 'none';
+    document.getElementById('volverLoginWrap').style.display = '';
+    document.getElementById('btnLogin').lastChild.textContent = ' Enviar enlace de recuperación';
+    setTimeout(() => document.getElementById('inputUser').focus(), 50);
+  }
+
+  function activarModoLogin() {
+    modoActual = 'login';
+    clearError(); clearSuccess();
+    document.querySelector('.card-title').textContent = 'Iniciar sesión';
+    document.querySelector('.card-sub').textContent = 'Ingresa tus credenciales para acceder al sistema';
+    document.getElementById('grupoPass').style.display = '';
+    document.getElementById('linkOlvidoWrap').style.display = '';
+    document.getElementById('volverLoginWrap').style.display = 'none';
+    document.getElementById('btnLogin').lastChild.textContent = ' Iniciar sesión';
+  }
+
+  async function doRecuperar() {
+    clearError(); clearSuccess();
+    const email = document.getElementById('inputUser').value.trim();
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      showError('Ingresa un correo electrónico válido');
+      return;
+    }
+
+    const btn = document.getElementById('btnLogin');
+    btn.disabled = true;
+    const textoOriginal = btn.innerHTML;
+    btn.innerHTML = '<svg viewBox="0 0 20 20" fill="currentColor" style="animation:spin .8s linear infinite"><path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd"/></svg> Enviando...';
+
+    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: RESET_PASSWORD_URL });
+
+    btn.disabled = false;
+    btn.innerHTML = textoOriginal;
+
+    // Por seguridad nunca se revela si el correo existe o no: Supabase Auth
+    // ya responde igual (sin error) en ambos casos por diseño, así que este
+    // mismo mensaje de éxito cubre "existe" y "no existe" — solo se muestra
+    // un error real ante fallas técnicas (red, límite de tasa, etc.).
+    if (error) {
+      showError('No se pudo enviar el correo. Intenta de nuevo en unos minutos.');
+      return;
+    }
+    showSuccess('Si el correo está registrado, te enviamos un enlace para restablecer tu contraseña. Revisa tu bandeja de entrada (y spam).');
+  }
+
+  document.getElementById('linkOlvidoPassword').addEventListener('click', (e) => { e.preventDefault(); activarModoRecuperar(); });
+  document.getElementById('linkVolverLogin').addEventListener('click', (e) => { e.preventDefault(); activarModoLogin(); });
+
   /* ── Modo "definir contraseña" (llega desde el correo de invitación de un
      administrador — ver Edge Function invitar-planificador). Ya no hay
      autorregistro: la única forma de obtener cuenta es que un admin invite
@@ -334,6 +441,7 @@
     document.getElementById('labelPass').textContent = 'Nueva contraseña';
     document.getElementById('inputPass').placeholder = 'Mínimo 6 caracteres';
     document.getElementById('grupoConfirmar').style.display = '';
+    document.getElementById('linkOlvidoWrap').style.display = 'none';
     document.getElementById('btnLogin').lastChild.textContent = ' Guardar y entrar';
     document.getElementById('btnLogin').onclick = null;
     document.getElementById('btnLogin').addEventListener('click', doDefinirPassword);
@@ -371,9 +479,21 @@
 
     if (Auth.get()) { window.location.replace('dashboard.html'); return; }
 
-    document.getElementById('inputUser').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('inputPass').focus(); });
+    if (new URLSearchParams(location.search).get('resetOk') === '1') {
+      showSuccess('Contraseña actualizada ✓ Inicia sesión con tu nueva contraseña.');
+      history.replaceState(null, '', location.pathname); // limpia ?resetOk=1 de la URL
+    }
+
+    document.getElementById('inputUser').addEventListener('keydown', e => {
+      if (e.key !== 'Enter') return;
+      if (modoActual === 'recuperar') doRecuperar();
+      else document.getElementById('inputPass').focus();
+    });
     document.getElementById('inputPass').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
-    document.getElementById('btnLogin').addEventListener('click', doLogin);
+    document.getElementById('btnLogin').addEventListener('click', () => {
+      if (modoActual === 'recuperar') doRecuperar();
+      else doLogin();
+    });
   })();
 </script>
 </body>

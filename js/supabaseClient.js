@@ -11,9 +11,10 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
-    // true: necesario para que login.html pueda procesar el enlace de
-    // invitación que manda la Edge Function invitar-planificador (llega con
-    // el token de sesión en el hash de la URL).
+    // true: necesario para que login.html procese el enlace de invitación
+    // (Edge Function invitar-planificador) y reset-password.html procese el
+    // enlace de recuperación (supabase.auth.resetPasswordForEmail) — ambos
+    // llegan con el token de sesión en el hash de la URL.
     detectSessionInUrl: true,
   },
 });
