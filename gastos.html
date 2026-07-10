@@ -93,34 +93,26 @@
     <div class="form-row">
       <div class="form-group"><label>Evento *</label><select class="form-select" id="fEvento" onchange="onEventoChange()"></select></div>
       <div class="form-group">
-        <label>Proveedor relacionado</label>
-        <select class="form-select" id="fEventoProveedor"></select>
+        <label>Proveedor</label>
+        <select class="form-select" id="fProveedor"></select>
       </div>
     </div>
     <div class="form-row">
-      <div class="form-group">
-        <label>Buscar proveedor para este evento</label>
-        <input type="text" class="form-input" id="fProveedorBuscar" list="proveedoresOptions" placeholder="Buscar por nombre o tipo"/>
-        <input type="hidden" id="fProveedorNuevo"/>
-        <datalist id="proveedoresOptions"></datalist>
-      </div>
       <div class="form-group">
         <label>Servicio contratado</label>
         <input type="text" class="form-input" id="fServicioProveedor" placeholder="Ej: Catering, flores, sonido"/>
       </div>
-    </div>
-    <div class="form-row">
       <div class="form-group"><label>Categoría</label><select class="form-select" id="fCategoria"></select></div>
+    </div>
+    <div class="form-row">
       <div class="form-group"><label>Monto (S/) *</label><input type="number" class="form-input" id="fMonto" placeholder="0.00" min="0" step="0.01"/></div>
-    </div>
-    <div class="form-row">
       <div class="form-group"><label>Fecha *</label><input type="date" class="form-input" id="fFecha"/></div>
-      <div class="form-group"><label>Método de pago</label><select class="form-select" id="fMetodo"><option>Efectivo</option><option>Transferencia</option><option>Tarjeta</option><option>Yape/Plin</option></select></div>
     </div>
     <div class="form-row">
+      <div class="form-group"><label>Método de pago</label><select class="form-select" id="fMetodo"><option>Efectivo</option><option>Transferencia</option><option>Tarjeta</option><option>Yape/Plin</option></select></div>
       <div class="form-group"><label>Estado</label><select class="form-select" id="fEstado"><option>Pagado</option><option>Pendiente</option><option>Anulado</option></select></div>
-      <div class="form-group"><label>Adjunto / comprobante</label><input type="url" class="form-input" id="fComprobante" placeholder="https://..."/></div>
     </div>
+    <div class="form-group"><label>Adjunto / comprobante</label><input type="url" class="form-input" id="fComprobante" placeholder="https://..."/></div>
     <div class="form-group"><label>Descripción</label><textarea class="form-input form-textarea" id="fDescripcion" rows="3" placeholder="Detalle del gasto…"></textarea></div>
     <div class="modal-footer">
       <button class="btn btn--outline" onclick="cerrarModal()">Cancelar</button>
@@ -146,13 +138,14 @@ const METODOS = ['Efectivo','Transferencia','Tarjeta','Yape/Plin'];
 let editandoId = null;
 let todosLosGastos = [];
 let eventosDisponibles = [];
+// Vínculos evento_proveedores del evento elegido — solo para saber si el
+// proveedor escogido en #fProveedor ya está vinculado a este evento (y
+// reusar ese vínculo) o si hay que crearlo al guardar.
 let proveedoresEvento = [];
 // Catálogo completo de proveedores activos, precargado una vez al iniciar
-// la página — así el datalist de "Buscar proveedor" muestra todos los
-// registrados desde que se abre el modal, sin esperar a que se escriban
-// 2 caracteres para recién ir a buscarlos a la base de datos.
+// la página — el select de "Proveedor" siempre muestra todos los
+// registrados, sin importar el evento elegido.
 let proveedoresActivos = [];
-let proveedoresBusqueda = [];
 
 window.renderTabla = renderTabla;
 window.exportarCSV = exportarCSV;
@@ -195,73 +188,42 @@ function poblarEventos() {
   });
 }
 
-function poblarProveedoresEvento(lista = []) {
-  const sel = document.getElementById('fEventoProveedor');
-  sel.innerHTML = '<option value="">— Seleccionar proveedor del evento —</option>';
-  lista.forEach(ep => {
+function poblarProveedorSelect() {
+  const sel = document.getElementById('fProveedor');
+  const actual = sel.value;
+  sel.innerHTML = '<option value="">— Sin proveedor —</option>';
+  proveedoresActivos.forEach(p => {
     const o = document.createElement('option');
-    o.value = ep.id;
-    o.textContent = `${ep.proveedor?.nombre || 'Proveedor'}${ep.servicio_contratado ? ' · ' + ep.servicio_contratado : ''}`;
+    o.value = p.id;
+    o.textContent = `${p.nombre}${p.tipo ? ' · ' + p.tipo : ''}`;
     sel.appendChild(o);
   });
-}
-
-const proveedorLabel = (p) => `${p.nombre}${p.tipo ? ' · ' + p.tipo : ''}`;
-
-function poblarProveedorOptions() {
-  const list = document.getElementById('proveedoresOptions');
-  list.innerHTML = '';
-  proveedoresBusqueda.forEach(p => {
-    const opt = document.createElement('option');
-    opt.value = proveedorLabel(p);
-    opt.dataset.id = p.id;
-    list.appendChild(opt);
-  });
-}
-
-function resolverProveedorBusqueda() {
-  const input = document.getElementById('fProveedorBuscar');
-  const hidden = document.getElementById('fProveedorNuevo');
-  const texto = input.value.trim().toLowerCase();
-  const proveedor = proveedoresBusqueda.find(p => proveedorLabel(p).toLowerCase() === texto || String(p.id) === hidden.value);
-  hidden.value = proveedor?.id || '';
-  return proveedor || null;
-}
-
-function buscarProveedores() {
-  // El datalist ya tiene el catálogo completo (ver cargarProveedoresActivos);
-  // el navegador filtra las opciones visibles por su cuenta a medida que se
-  // escribe. Acá solo se resuelve el id oculto si lo tipeado ya coincide
-  // exacto con algún proveedor de la lista.
-  document.getElementById('fProveedorNuevo').value = '';
-  resolverProveedorBusqueda();
+  if (actual) sel.value = actual;
 }
 
 async function cargarProveedoresActivos() {
   const { data, error } = await proveedoresService.getAll('Activo');
   if (error) { console.warn('[gastos] No se pudo precargar proveedores:', error); return; }
   proveedoresActivos = data || [];
-  proveedoresBusqueda = proveedoresActivos;
-  poblarProveedorOptions();
+  poblarProveedorSelect();
 }
 
-async function asegurarProveedorEvento(eventoId) {
-  const seleccionado = parseInt(document.getElementById('fEventoProveedor').value) || null;
-  if (seleccionado) return seleccionado;
+/**
+ * El gasto se guarda contra `evento_proveedores` (no directo contra
+ * `proveedores`), así que si el proveedor elegido todavía no está
+ * vinculado a este evento, se crea ese vínculo antes de guardar.
+ * @returns {number|null} evento_proveedor_id, o null si no se eligió proveedor
+ */
+async function asegurarProveedorEvento(eventoId, proveedorId) {
+  if (!proveedorId) return null;
 
-  const proveedor = resolverProveedorBusqueda();
-  if (!proveedor) return null;
-
-  const yaAsignado = proveedoresEvento.find(ep => Number(ep.proveedor?.id) === Number(proveedor.id));
-  if (yaAsignado) {
-    document.getElementById('fEventoProveedor').value = yaAsignado.id;
-    return yaAsignado.id;
-  }
+  const yaAsignado = proveedoresEvento.find(ep => Number(ep.proveedor?.id) === Number(proveedorId));
+  if (yaAsignado) return yaAsignado.id;
 
   const servicio = document.getElementById('fServicioProveedor').value.trim() || document.getElementById('fCategoria').value || 'Gasto';
   const { data, error } = await proveedoresService.asignarAEvento({
     evento_id: eventoId,
-    proveedor_id: proveedor.id,
+    proveedor_id: proveedorId,
     servicio_contratado: servicio,
     estado: 'Confirmado',
   });
@@ -270,10 +232,11 @@ async function asegurarProveedorEvento(eventoId) {
     return null;
   }
 
+  // Se recarga (en vez de solo agregar `data` a la lista local) porque
+  // asignarAEvento() devuelve la fila cruda de evento_proveedores, sin el
+  // join a `proveedor` que el resto de este archivo espera en cada ítem.
   const recarga = await gastosService.getEventoProveedores(eventoId);
   proveedoresEvento = recarga.data || [];
-  poblarProveedoresEvento(proveedoresEvento);
-  document.getElementById('fEventoProveedor').value = data.id;
   return data.id;
 }
 
@@ -282,13 +245,6 @@ async function onEventoChange() {
   const { data, error } = await gastosService.getEventoProveedores(eventoId);
   if (error) { Toast.error('Error al cargar proveedores del evento'); return; }
   proveedoresEvento = data || [];
-  poblarProveedoresEvento(proveedoresEvento);
-  document.getElementById('fProveedorBuscar').value = '';
-  document.getElementById('fProveedorNuevo').value = '';
-  document.getElementById('fServicioProveedor').value = '';
-  // El catálogo completo (proveedoresActivos/proveedoresBusqueda) NO se
-  // limpia acá: es independiente del evento elegido, cambiar de evento no
-  // debe vaciar el datalist de "Buscar proveedor".
 }
 
 function renderTabla() {
@@ -363,8 +319,8 @@ function abrirModal() {
   document.getElementById('modalTitulo').textContent = 'Nuevo Gasto';
   limpiarForm();
   poblarEventos();
-  poblarProveedoresEvento([]);
-  poblarProveedorOptions();
+  proveedoresEvento = [];
+  poblarProveedorSelect();
   document.getElementById('fFecha').value = new Date().toISOString().split('T')[0];
   document.getElementById('modalOverlay').classList.add('modal-overlay--open');
 }
@@ -373,9 +329,9 @@ function cerrarModal() { document.getElementById('modalOverlay').classList.remov
 document.getElementById('modalOverlay').addEventListener('click', e => { if (e.target.id === 'modalOverlay') cerrarModal(); });
 
 function limpiarForm() {
-  ['fMonto','fFecha','fComprobante','fDescripcion','fProveedorBuscar','fProveedorNuevo','fServicioProveedor'].forEach(id => document.getElementById(id).value = '');
+  ['fMonto','fFecha','fComprobante','fDescripcion','fServicioProveedor'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('fEvento').value = '';
-  document.getElementById('fEventoProveedor').value = '';
+  document.getElementById('fProveedor').value = '';
   document.getElementById('fCategoria').value = 'Otros';
   document.getElementById('fMetodo').value = 'Efectivo';
   document.getElementById('fEstado').value = 'Pagado';
@@ -392,8 +348,8 @@ async function guardarGasto() {
   const descripcion = document.getElementById('fDescripcion').value.trim();
 
   if (!evento_id) { Toast.error('Selecciona un evento'); return; }
-  const evento_proveedor_id = await asegurarProveedorEvento(evento_id);
-  if (!evento_proveedor_id) { Toast.error('Selecciona o vincula un proveedor al evento'); return; }
+  const proveedor_id = parseInt(document.getElementById('fProveedor').value) || null;
+  const evento_proveedor_id = await asegurarProveedorEvento(evento_id, proveedor_id);
   if (monto <= 0) { Toast.error('El monto debe ser mayor a 0'); return; }
   if (!fecha) { Toast.error('La fecha es obligatoria'); return; }
   if (comprobante_url && !/^https?:\/\/.+/i.test(comprobante_url)) { Toast.error('El adjunto debe ser una URL válida'); return; }
@@ -420,9 +376,8 @@ async function editarGasto(id) {
   document.getElementById('modalTitulo').textContent = 'Editar Gasto';
   document.getElementById('fEvento').value = gasto.evento_id || '';
   await onEventoChange();
-  document.getElementById('fEventoProveedor').value = gasto.evento_proveedor_id || '';
-  document.getElementById('fProveedorBuscar').value = '';
-  document.getElementById('fProveedorNuevo').value = '';
+  poblarProveedorSelect();
+  document.getElementById('fProveedor').value = gasto.evento_proveedor?.proveedor?.id || '';
   document.getElementById('fServicioProveedor').value = gasto.evento_proveedor?.servicio_contratado || '';
   document.getElementById('fCategoria').value = gasto.categoria || 'Otros';
   document.getElementById('fMonto').value = gasto.monto || '';
@@ -478,7 +433,6 @@ async function cargarDatos() {
 }
 
 sessionReady.then(cargarDatos);
-document.getElementById('fProveedorBuscar').addEventListener('input', buscarProveedores);
 </script>
 </body>
 </html>
