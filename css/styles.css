@@ -1818,7 +1818,15 @@ body::selection { background: rgba(201,163,90,.24); color: var(--txt-primary); }
 .modal {
   border: 1px solid var(--border-soft);
   padding: 0;
-  overflow: hidden;
+  /* No usar overflow:hidden acá: la regla base (línea ~836) ya pone
+     max-height:90vh + overflow-y:auto para que el modal completo pueda
+     desplazarse cuando el contenido crece (ej. filas de servicios en
+     Reservas). overflow:hidden tapaba ese scroll y el contenido que no
+     cabía quedaba cortado — incluido el footer con "Guardar". overflow-x
+     se mantiene oculto para que las esquinas redondeadas del header/footer
+     no se vean afectadas. */
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .modal-header {
@@ -1826,6 +1834,13 @@ body::selection { background: rgba(201,163,90,.24); color: var(--txt-primary); }
   padding: 22px 24px;
   border-bottom: 1px solid var(--border-soft);
   background: var(--surface-soft);
+  /* Sticky en vez de solo "en flujo": como .modal es el propio contenedor
+     con scroll (ver arriba), esto alcanza para que el título y el botón
+     "✕" queden siempre visibles arriba, sin necesitar un div contenedor
+     aparte para el contenido. */
+  position: sticky;
+  top: 0;
+  z-index: 2;
 }
 
 .modal-header h3 { font-size: 18px; letter-spacing: -.025em; }
@@ -1843,6 +1858,11 @@ body::selection { background: rgba(201,163,90,.24); color: var(--txt-primary); }
   padding: 18px 24px;
   border-top: 1px solid var(--border-soft);
   background: var(--surface-soft);
+  /* Fijo abajo mientras el modal se desplaza — "Guardar"/"Cancelar" quedan
+     siempre alcanzables sin tener que llegar hasta el final del scroll. */
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
 }
 
 .modal-close {
