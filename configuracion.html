@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8"/>
@@ -16,8 +16,9 @@
     .conf-section:last-child{border-bottom:none;}
     .conf-section-title{font-size:13.5px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px;}
     .conf-section-title svg{width:16px;height:16px;color:var(--accent);}
-    .storage-bar{height:8px;background:#f1f5f9;border-radius:4px;overflow:hidden;margin-top:8px;}
-    .storage-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--accent),#d4b77a);transition:width .5s ease;}
+    .conf-note{font-size:12px;color:var(--txt-muted);margin-bottom:14px;}
+    .form-hint{font-size:12px;color:var(--txt-muted);margin-top:6px;display:inline-block;}
+    .badge-soon{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:var(--txt-muted);background:#f1f5f9;border-radius:4px;padding:2px 6px;margin-left:8px;vertical-align:middle;}
     .danger-zone{border:1px solid var(--red-bg);border-radius:var(--radius-lg);padding:20px 24px;background:var(--card-bg);}
     .danger-zone h3{font-size:14px;font-weight:700;color:var(--red);margin-bottom:4px;}
     .danger-zone p{font-size:13px;color:var(--txt-secondary);margin-bottom:14px;}
@@ -51,11 +52,11 @@
     <div class="page-wrapper">
 
       <div class="page-header">
-        <div><h1>Configuración</h1><p>Ajusta las preferencias del sistema Memory.</p></div>
+        <div><h1>Configuración <span class="storage-indicator"><span class="storage-dot" id="storageDot"></span><span id="storageStatus">Cargando…</span></span></h1><p>Ajusta las preferencias del sistema Memory.</p></div>
         <div class="page-actions">
-          <button class="btn btn--outline" onclick="exportarDatos()">
+          <button class="btn btn--outline" disabled title="Disponible en una futura versión">
             <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
-            Exportar datos
+            Exportar datos <span class="badge-soon">Próximamente</span>
           </button>
         </div>
       </div>
@@ -80,20 +81,32 @@
                 <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd"/></svg>
                 Información General
               </div>
-              <div class="form-group" style="margin-bottom:14px"><label>Nombre del Sistema</label><input type="text" class="form-input" id="cfgNombreSistema" value="Memory"/></div>
+              <p class="conf-note" id="generalAdminNote" hidden>Solo un administrador puede modificar esta sección. Los campos se muestran de solo lectura.</p>
+              <div class="form-group" style="margin-bottom:14px"><label>Nombre del Sistema</label><input type="text" class="form-input" id="cfgNombreSistema" data-admin-only/></div>
               <div class="form-row">
                 <div class="form-group"><label>Moneda</label>
-                  <select class="form-select" id="cfgMoneda">
-                    <option value="PEN" selected>Soles (S/)</option>
+                  <select class="form-select" id="cfgMoneda" data-admin-only>
+                    <option value="PEN">Soles (S/)</option>
                     <option value="USD">Dólares ($)</option>
                     <option value="EUR">Euros (€)</option>
                   </select>
+                  <span class="form-hint">Símbolo: <strong id="monedaSimbolo">S/</strong> (se aplica automáticamente en todo el sistema)</span>
                 </div>
                 <div class="form-group"><label>Zona Horaria</label>
-                  <select class="form-select" id="cfgZona">
-                    <option value="America/Lima" selected>America/Lima (GMT-5)</option>
+                  <select class="form-select" id="cfgZona" data-admin-only>
+                    <option value="America/Lima">America/Lima (GMT-5)</option>
                     <option value="America/Bogota">America/Bogota (GMT-5)</option>
                     <option value="America/Santiago">America/Santiago (GMT-4)</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group"><label>Porcentaje de Impuesto (%)</label><input type="number" class="form-input" id="cfgImpuesto" data-admin-only min="0" max="100" step="0.01"/></div>
+                <div class="form-group"><label>Formato de Fecha</label>
+                  <select class="form-select" id="cfgFormatoFecha" data-admin-only>
+                    <option value="DD/MM/YYYY">DD/MM/YYYY</option>
+                    <option value="MM/DD/YYYY">MM/DD/YYYY</option>
+                    <option value="YYYY-MM-DD">YYYY-MM-DD</option>
                   </select>
                 </div>
               </div>
@@ -103,12 +116,13 @@
                 <svg viewBox="0 0 20 20" fill="currentColor"><path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/><path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"/></svg>
                 Preferencias
               </div>
+              <p class="conf-note">Estas preferencias son solo visuales y se guardan únicamente en este navegador.</p>
               <div class="toggle-row"><div class="toggle-label"><h4>Confirmaciones de eliminación</h4><p>Pedir confirmación antes de eliminar registros</p></div><label class="toggle"><input type="checkbox" id="cfgConfirmDelete" checked/><span class="toggle-slider"></span></label></div>
               <div class="toggle-row"><div class="toggle-label"><h4>Animaciones de interfaz</h4><p>Transiciones suaves en la interfaz</p></div><label class="toggle"><input type="checkbox" id="cfgAnimaciones" checked/><span class="toggle-slider"></span></label></div>
               <div class="toggle-row"><div class="toggle-label"><h4>Sidebar colapsado por defecto</h4><p>Iniciar con el sidebar reducido</p></div><label class="toggle"><input type="checkbox" id="cfgSidebarCollapsed"/><span class="toggle-slider"></span></label></div>
             </div>
             <div class="conf-section" style="border-bottom:none">
-              <button class="btn btn--primary" onclick="guardarGeneral()">Guardar cambios</button>
+              <button class="btn btn--primary" id="btnGuardarGeneral" onclick="guardarGeneral(this)">Guardar cambios</button>
             </div>
           </div>
 
@@ -119,17 +133,18 @@
                 <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a1 1 0 110 2h-3a1 1 0 01-1-1v-2a1 1 0 00-1-1H9a1 1 0 00-1 1v2a1 1 0 01-1 1H4a1 1 0 110-2V4z" clip-rule="evenodd"/></svg>
                 Datos de la Empresa
               </div>
-              <div class="form-group" style="margin-bottom:14px"><label>Razón Social</label><input type="text" class="form-input" id="cfgRazonSocial" value="Memory S.A.C."/></div>
+              <p class="conf-note" id="empresaAdminNote" hidden>Solo un administrador puede modificar esta sección. Los campos se muestran de solo lectura.</p>
+              <div class="form-group" style="margin-bottom:14px"><label>Razón Social</label><input type="text" class="form-input" id="cfgRazonSocial" data-admin-only/></div>
               <div class="form-row">
-                <div class="form-group"><label>RUC</label><input type="text" class="form-input" id="cfgRuc" value="20512345678"/></div>
-                <div class="form-group"><label>Teléfono</label><input type="text" class="form-input" id="cfgTel" value="987 000 000"/></div>
+                <div class="form-group"><label>RUC / NIT</label><input type="text" class="form-input" id="cfgRuc" data-admin-only/></div>
+                <div class="form-group"><label>Teléfono</label><input type="text" class="form-input" id="cfgTel" data-admin-only/></div>
               </div>
-              <div class="form-group" style="margin-bottom:14px"><label>Email corporativo</label><input type="email" class="form-input" id="cfgEmailEmp" value="admin@eventos.com"/></div>
-              <div class="form-group" style="margin-bottom:14px"><label>Dirección</label><input type="text" class="form-input" id="cfgDireccion" value="Av. Principal 123, Lima"/></div>
-              <div class="form-group" style="margin-bottom:14px"><label>Sitio web</label><input type="text" class="form-input" id="cfgWeb" placeholder="https://mievento.com"/></div>
+              <div class="form-group" style="margin-bottom:14px"><label>Email corporativo</label><input type="email" class="form-input" id="cfgEmailEmp" data-admin-only/></div>
+              <div class="form-group" style="margin-bottom:14px"><label>Dirección</label><input type="text" class="form-input" id="cfgDireccion" data-admin-only/></div>
+              <div class="form-group" style="margin-bottom:14px"><label>Sitio web</label><input type="text" class="form-input" id="cfgWeb" data-admin-only placeholder="https://mievento.com"/></div>
             </div>
             <div class="conf-section" style="border-bottom:none">
-              <button class="btn btn--primary" onclick="guardarEmpresa()">Guardar cambios</button>
+              <button class="btn btn--primary" id="btnGuardarEmpresa" onclick="guardarEmpresa(this)">Guardar cambios</button>
             </div>
           </div>
 
@@ -140,6 +155,7 @@
                 <svg viewBox="0 0 20 20" fill="currentColor"><path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z"/></svg>
                 Alertas del Sistema
               </div>
+              <p class="conf-note">Estas preferencias se guardan solo en este navegador. El envío real de notificaciones aún no está disponible <span class="badge-soon">Próximamente</span>.</p>
               <div class="toggle-row"><div class="toggle-label"><h4>Nueva Reserva</h4><p>Notificar al crear una nueva reserva</p></div><label class="toggle"><input type="checkbox" id="cfgNotifReserva" checked/><span class="toggle-slider"></span></label></div>
               <div class="toggle-row"><div class="toggle-label"><h4>Pago Recibido</h4><p>Notificar cuando se registra un pago</p></div><label class="toggle"><input type="checkbox" id="cfgNotifPago" checked/><span class="toggle-slider"></span></label></div>
               <div class="toggle-row"><div class="toggle-label"><h4>Evento Próximo (24h)</h4><p>Recordatorio un día antes del evento</p></div><label class="toggle"><input type="checkbox" id="cfgNotifEvento" checked/><span class="toggle-slider"></span></label></div>
@@ -158,20 +174,20 @@
                 <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"/></svg>
                 Cambiar Contraseña
               </div>
-              <div class="form-group" style="margin-bottom:14px"><label>Contraseña actual</label><input type="password" class="form-input" id="cfgPassActual" placeholder="••••••••"/></div>
-              <div class="form-group" style="margin-bottom:14px"><label>Nueva contraseña</label><input type="password" class="form-input" id="cfgPassNueva" placeholder="••••••••"/></div>
-              <div class="form-group" style="margin-bottom:14px"><label>Confirmar nueva contraseña</label><input type="password" class="form-input" id="cfgPassConfirm" placeholder="••••••••"/></div>
+              <div class="form-group" style="margin-bottom:14px"><label>Contraseña actual</label><input type="password" class="form-input" id="cfgPassActual" placeholder="••••••••" autocomplete="current-password"/></div>
+              <div class="form-group" style="margin-bottom:14px"><label>Nueva contraseña</label><input type="password" class="form-input" id="cfgPassNueva" placeholder="••••••••" autocomplete="new-password"/></div>
+              <div class="form-group" style="margin-bottom:14px"><label>Confirmar nueva contraseña</label><input type="password" class="form-input" id="cfgPassConfirm" placeholder="••••••••" autocomplete="new-password"/></div>
             </div>
             <div class="conf-section">
               <div class="conf-section-title">
                 <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
                 Opciones de Seguridad
               </div>
-              <div class="toggle-row"><div class="toggle-label"><h4>Sesión automática (30 min)</h4><p>Cerrar sesión tras 30 minutos de inactividad</p></div><label class="toggle"><input type="checkbox" checked/><span class="toggle-slider"></span></label></div>
-              <div class="toggle-row"><div class="toggle-label"><h4>Autenticación de 2 factores</h4><p>Mayor seguridad para el acceso</p></div><label class="toggle"><input type="checkbox"/><span class="toggle-slider"></span></label></div>
+              <div class="toggle-row"><div class="toggle-label"><h4>Sesión automática (30 min) <span class="badge-soon">Próximamente</span></h4><p>Cerrar sesión tras 30 minutos de inactividad</p></div><label class="toggle"><input type="checkbox" disabled/><span class="toggle-slider"></span></label></div>
+              <div class="toggle-row"><div class="toggle-label"><h4>Autenticación de 2 factores <span class="badge-soon">Próximamente</span></h4><p>Mayor seguridad para el acceso</p></div><label class="toggle"><input type="checkbox" disabled/><span class="toggle-slider"></span></label></div>
             </div>
             <div class="conf-section" style="border-bottom:none">
-              <button class="btn btn--primary" onclick="guardarSeguridad()">Actualizar contraseña</button>
+              <button class="btn btn--primary" onclick="guardarSeguridad(this)">Actualizar contraseña</button>
             </div>
           </div>
 
@@ -182,31 +198,31 @@
                 <svg viewBox="0 0 20 20" fill="currentColor"><path d="M3 12v3c0 1.657 3.134 3 7 3s7-1.343 7-3v-3c0 1.657-3.134 3-7 3s-7-1.343-7-3z"/><path d="M3 7v3c0 1.657 3.134 3 7 3s7-1.343 7-3V7c0 1.657-3.134 3-7 3S3 8.657 3 7z"/><path d="M17 5c0 1.657-3.134 3-7 3S3 6.657 3 5s3.134-3 7-3 7 1.343 7 3z"/></svg>
                 Almacenamiento
               </div>
-              <div id="storageInfo"></div>
+              <p class="conf-note" style="margin-bottom:0">Los datos del sistema se almacenan en Supabase (PostgreSQL en la nube), con Row Level Security por rol. El logo se aloja como archivo físico en Firebase Storage; su referencia se guarda en Supabase.</p>
             </div>
             <div class="conf-section">
               <div class="conf-section-title">
                 <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
-                Exportar e Importar
+                Exportar e Importar <span class="badge-soon">Próximamente</span>
               </div>
-              <p style="font-size:13px;color:var(--txt-secondary);margin-bottom:14px">Descarga una copia de todos tus datos en formato JSON para respaldo o migración.</p>
+              <p style="font-size:13px;color:var(--txt-secondary);margin-bottom:14px">La exportación e importación de respaldos completos estará disponible en una futura versión.</p>
               <div style="display:flex;gap:10px">
-                <button class="btn btn--outline" onclick="exportarDatos()">
+                <button class="btn btn--outline" disabled title="Disponible en una futura versión">
                   <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
                   Descargar JSON
                 </button>
-                <label class="btn btn--outline" style="cursor:pointer">
+                <label class="btn btn--outline" style="opacity:.5;cursor:not-allowed" title="Disponible en una futura versión">
                   <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clip-rule="evenodd"/></svg>
                   Importar JSON
-                  <input type="file" accept=".json" style="display:none" onchange="importarDatos(event)"/>
+                  <input type="file" accept=".json" style="display:none" disabled/>
                 </label>
               </div>
             </div>
             <div class="conf-section" style="border-bottom:none">
               <div class="danger-zone">
-                <h3>Zona de peligro</h3>
+                <h3>Zona de peligro <span class="badge-soon">Próximamente</span></h3>
                 <p>Restablecer todos los datos a los valores iniciales de muestra. Esta acción no se puede deshacer.</p>
-                <button class="btn btn--danger btn--sm" onclick="resetearDatos()">
+                <button class="btn btn--danger btn--sm" disabled title="Disponible en una futura versión">
                   <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
                   Restablecer datos de muestra
                 </button>
@@ -284,231 +300,236 @@
 <div id="toast-container"></div>
 <script src="js/storage.js"></script>
 <script src="js/auth.js"></script>
-<script src="js/data.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/app.js"></script>
-<script>
-/* ── Tabs ────────────────────────────────────────────────────────────── */
-function switchTab(id, btn) {
-  document.querySelectorAll('.tab-panel').forEach(p => p.style.display='none');
-  document.querySelectorAll('.tab-btn').forEach(b  => b.classList.remove('active'));
-  document.getElementById(`tab-${id}`).style.display='block';
-  btn.classList.add('active');
-}
+<script type="module">
+  import * as configuracionService from './js/services/configuracionService.js';
+  import { supabase } from './js/supabaseClient.js';
 
-/* ── Guardar configuraciones ─────────────────────────────────────────── */
-function guardarGeneral() {
-  const cfg = {
-    nombreSistema: document.getElementById('cfgNombreSistema').value,
-    moneda:        document.getElementById('cfgMoneda').value,
-    zona:          document.getElementById('cfgZona').value,
-    confirmDelete: document.getElementById('cfgConfirmDelete').checked,
-    animaciones:   document.getElementById('cfgAnimaciones').checked,
-    sidebarCollapsed: document.getElementById('cfgSidebarCollapsed').checked,
-  };
-  Storage.set('ep:config:general', cfg);
-  if (cfg.sidebarCollapsed) Storage.set('ep:sidebar-collapsed', true);
-  else Storage.remove('ep:sidebar-collapsed');
-  Toast.success('Configuración general guardada ✓');
-}
+  /* ── Sesión y permisos ───────────────────────────────────────────────── */
+  const sesion = Auth.require();
+  const isAdmin = sesion?.rol === 'Administrador';
 
-function guardarEmpresa() {
-  const cfg = {
-    razonSocial: document.getElementById('cfgRazonSocial').value,
-    ruc:         document.getElementById('cfgRuc').value,
-    telefono:    document.getElementById('cfgTel').value,
-    email:       document.getElementById('cfgEmailEmp').value,
-    direccion:   document.getElementById('cfgDireccion').value,
-    web:         document.getElementById('cfgWeb').value,
-  };
-  Storage.set('ep:config:empresa', cfg);
-  Toast.success('Datos de empresa guardados ✓');
-}
+  const MONEDA_SIMBOLO = { PEN: 'S/', USD: '$', EUR: '€' };
 
-function guardarNotif() {
-  const cfg = {
-    reserva:   document.getElementById('cfgNotifReserva').checked,
-    pago:      document.getElementById('cfgNotifPago').checked,
-    evento:    document.getElementById('cfgNotifEvento').checked,
-    cancelado: document.getElementById('cfgNotifCancelado').checked,
-    cliente:   document.getElementById('cfgNotifCliente').checked,
-  };
-  Storage.set('ep:config:notif', cfg);
-  Toast.success('Preferencias de notificaciones guardadas ✓');
-}
+  let configuracionActual = null;
 
-function guardarSeguridad() {
-  const actual  = document.getElementById('cfgPassActual').value;
-  const nueva   = document.getElementById('cfgPassNueva').value;
-  const confirm = document.getElementById('cfgPassConfirm').value;
-  const u       = Auth.get();
-  if (!u) return;
+  /* ── Exposición global para los onclick del HTML ─────────────────────── */
+  window.switchTab = switchTab;
+  window.guardarGeneral = guardarGeneral;
+  window.guardarEmpresa = guardarEmpresa;
+  window.guardarNotif = guardarNotif;
+  window.guardarSeguridad = guardarSeguridad;
 
-  if (!actual) { Toast.error('Ingresa tu contraseña actual'); return; }
-  if (!nueva)  { Toast.error('Ingresa la nueva contraseña'); return; }
-  if (nueva.length < 8) { Toast.error('La contraseña debe tener al menos 8 caracteres'); return; }
-  if (nueva !== confirm) { Toast.error('Las contraseñas no coinciden'); return; }
-
-  const full = Data.usuarios.find(u.id);
-  if (!full || full.passwordHash !== btoa(actual)) {
-    Toast.error('La contraseña actual es incorrecta');
-    return;
+  /* ── Tabs ────────────────────────────────────────────────────────────── */
+  function switchTab(id, btn) {
+    document.querySelectorAll('.tab-panel').forEach(p => p.style.display = 'none');
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById(`tab-${id}`).style.display = 'block';
+    btn.classList.add('active');
   }
-  if (actual === nueva) { Toast.warning('La nueva contraseña debe ser diferente a la actual'); return; }
 
-  Data.usuarios.update(u.id, { passwordHash: btoa(nueva) });
-  Auth.refresh();
-  Toast.success('Contraseña actualizada ✓');
-  ['cfgPassActual','cfgPassNueva','cfgPassConfirm'].forEach(id => document.getElementById(id).value='');
-}
+  /* ── Indicador de estado ─────────────────────────────────────────────── */
+  function indicarEstado(estado) {
+    const dot = document.getElementById('storageDot');
+    const lbl = document.getElementById('storageStatus');
+    if (estado === 'cargando') { dot.className = 'storage-dot saving'; lbl.textContent = 'Cargando…'; }
+    else if (estado === 'guardando') { dot.className = 'storage-dot saving'; lbl.textContent = 'Guardando…'; }
+    else { dot.className = 'storage-dot'; lbl.textContent = 'Guardado ✓'; }
+  }
 
-/* ── Almacenamiento info ─────────────────────────────────────────────── */
-function renderStorageInfo() {
-  const s = Data.stats();
-  const items = [
-    { label:'Clientes', count: s.clientes.total },
-    { label:'Eventos',  count: s.eventos.total },
-    { label:'Reservas', count: s.reservas.total },
-    { label:'Ingresos', count: Data.ingresos.getAll().length },
-    { label:'Proveedores', count: s.proveedores.total },
-    { label:'Usuarios', count: Data.usuarios.getAll().length },
-  ];
+  /* ── Gating por rol: solo Administrador edita config de negocio ──────── */
+  function aplicarPermisos() {
+    if (isAdmin) return;
+    document.querySelectorAll('[data-admin-only]').forEach(el => { el.disabled = true; });
+    document.getElementById('btnGuardarGeneral').disabled = true;
+    document.getElementById('btnGuardarEmpresa').disabled = true;
+    document.getElementById('generalAdminNote').hidden = false;
+    document.getElementById('empresaAdminNote').hidden = false;
+  }
 
-  let usedBytes = 0;
-  try { usedBytes = new Blob([JSON.stringify(localStorage)]).size; } catch {}
-  const usedKB = (usedBytes / 1024).toFixed(1);
-  const pct    = Math.min(Math.round(usedBytes / (5*1024*1024) * 100), 100);
+  /* ── Cargar configuración desde Supabase ──────────────────────────────── */
+  async function cargarConfiguracion() {
+    indicarEstado('cargando');
+    const { data, error } = await configuracionService.getConfiguracion();
+    if (error) {
+      Toast.error('No se pudo cargar la configuración del sistema');
+      indicarEstado('listo');
+      return;
+    }
+    configuracionActual = data || {};
 
-  const el = document.getElementById('storageInfo');
-  el.innerHTML = `
-    <div style="display:flex;justify-content:space-between;font-size:12.5px;color:var(--txt-secondary);margin-bottom:4px">
-      <span>Espacio usado</span><strong>${usedKB} KB de ~5 MB</strong>
-    </div>
-    <div class="storage-bar"><div class="storage-fill" style="width:${pct}%"></div></div>
-    <div style="margin-top:14px;display:flex;flex-direction:column;gap:6px">
-      ${items.map(i=>`<div class="info-row"><span>${i.label}</span><span>${i.count} registros</span></div>`).join('')}
-    </div>`;
-}
+    document.getElementById('cfgNombreSistema').value = configuracionActual.nombre_sistema || '';
+    document.getElementById('cfgMoneda').value = configuracionActual.moneda || 'PEN';
+    document.getElementById('cfgZona').value = configuracionActual.zona_horaria || 'America/Lima';
+    document.getElementById('cfgImpuesto').value = configuracionActual.porcentaje_impuesto ?? 0;
+    document.getElementById('cfgFormatoFecha').value = configuracionActual.formato_fecha || 'DD/MM/YYYY';
+    actualizarSimboloMoneda();
 
-function renderSysInfo() {
-  const meta = Storage.get('ep:meta',{});
-  const el = document.getElementById('sysInfo');
-  el.innerHTML = `
-    <div class="info-row"><span>Versión</span><span>v2.0.0</span></div>
-    <div class="info-row"><span>Inicializado</span><span>${meta.date ? new Date(meta.date).toLocaleDateString('es-PE') : '—'}</span></div>
-    <div class="info-row"><span>Navegador</span><span>${navigator.userAgent.split(' ').pop()}</span></div>
-    <div class="info-row"><span>Almacenamiento</span><span>Firebase Firestore + localStorage</span></div>`;
-}
+    document.getElementById('cfgRazonSocial').value = configuracionActual.razon_social || '';
+    document.getElementById('cfgRuc').value = configuracionActual.ruc || '';
+    document.getElementById('cfgTel').value = configuracionActual.telefono || '';
+    document.getElementById('cfgEmailEmp').value = configuracionActual.email || '';
+    document.getElementById('cfgDireccion').value = configuracionActual.direccion || '';
+    document.getElementById('cfgWeb').value = configuracionActual.web || '';
 
-/* ── Export / Import / Reset ─────────────────────────────────────────── */
-function exportarDatos() {
-  const backup = {
-    version: '2.0',
-    exportedAt: new Date().toISOString(),
-    clientes:    Data.clientes.getAll(),
-    eventos:     Data.eventos.getAll(),
-    reservas:    Data.reservas.getAll(),
-    ingresos:    Data.ingresos.getAll(),
-    proveedores: Data.proveedores.getAll(),
-    usuarios:    Data.usuarios.getAll(),
-  };
-  const blob = new Blob([JSON.stringify(backup, null, 2)], { type:'application/json' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = `memory_backup_${new Date().toISOString().split('T')[0]}.json`;
-  a.click();
-  Toast.success('Backup descargado ✓');
-}
+    renderSysInfo();
+    indicarEstado('listo');
+  }
 
-function importarDatos(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = async (e) => {
+  function actualizarSimboloMoneda() {
+    const moneda = document.getElementById('cfgMoneda').value;
+    document.getElementById('monedaSimbolo').textContent = MONEDA_SIMBOLO[moneda] || moneda;
+  }
+  document.getElementById('cfgMoneda').addEventListener('change', actualizarSimboloMoneda);
+
+  /* ── Preferencias visuales (localStorage, nunca datos de negocio) ────── */
+  function cargarPreferenciasVisuales() {
+    const general = Storage.get('ep:pref:general', {});
+    if (general.confirmDelete !== undefined) document.getElementById('cfgConfirmDelete').checked = general.confirmDelete;
+    if (general.animaciones !== undefined) document.getElementById('cfgAnimaciones').checked = general.animaciones;
+    if (general.sidebarCollapsed !== undefined) document.getElementById('cfgSidebarCollapsed').checked = general.sidebarCollapsed;
+
+    const notif = Storage.get('ep:pref:notif', {});
+    if (notif.reserva !== undefined) document.getElementById('cfgNotifReserva').checked = notif.reserva;
+    if (notif.pago !== undefined) document.getElementById('cfgNotifPago').checked = notif.pago;
+    if (notif.evento !== undefined) document.getElementById('cfgNotifEvento').checked = notif.evento;
+    if (notif.cancelado !== undefined) document.getElementById('cfgNotifCancelado').checked = notif.cancelado;
+    if (notif.cliente !== undefined) document.getElementById('cfgNotifCliente').checked = notif.cliente;
+  }
+
+  /* ── Guardar: General (negocio → Supabase, preferencias → localStorage) */
+  async function guardarGeneral(boton) {
+    const prefs = {
+      confirmDelete: document.getElementById('cfgConfirmDelete').checked,
+      animaciones: document.getElementById('cfgAnimaciones').checked,
+      sidebarCollapsed: document.getElementById('cfgSidebarCollapsed').checked,
+    };
+    Storage.set('ep:pref:general', prefs);
+    if (prefs.sidebarCollapsed) Storage.set('ep:sidebar-collapsed', true);
+    else Storage.remove('ep:sidebar-collapsed');
+
+    if (!isAdmin) {
+      Toast.warning('Preferencias visuales guardadas. Solo un administrador puede modificar la configuración general.');
+      return;
+    }
+
+    const nombreSistema = document.getElementById('cfgNombreSistema').value.trim();
+    const impuesto = Number(document.getElementById('cfgImpuesto').value);
+    if (!nombreSistema) { Toast.error('El nombre del sistema no puede estar vacío'); return; }
+    if (Number.isNaN(impuesto) || impuesto < 0 || impuesto > 100) { Toast.error('El porcentaje de impuesto debe estar entre 0 y 100'); return; }
+
+    if (boton) boton.disabled = true;
+    indicarEstado('guardando');
+    const { error } = await configuracionService.actualizarConfiguracion({
+      nombre_sistema: nombreSistema,
+      moneda: document.getElementById('cfgMoneda').value,
+      zona_horaria: document.getElementById('cfgZona').value,
+      porcentaje_impuesto: impuesto,
+      formato_fecha: document.getElementById('cfgFormatoFecha').value,
+    });
+    indicarEstado('listo');
+    if (boton) boton.disabled = false;
+    if (error) { Toast.error('No se pudo guardar la configuración general'); return; }
+    Toast.success('Configuración general guardada ✓');
+  }
+
+  /* ── Guardar: Empresa (100% Supabase) ─────────────────────────────────── */
+  async function guardarEmpresa(boton) {
+    if (!isAdmin) { Toast.error('Solo un administrador puede modificar los datos de la empresa'); return; }
+
+    const email = document.getElementById('cfgEmailEmp').value.trim();
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { Toast.error('El correo corporativo no es válido'); return; }
+
+    if (boton) boton.disabled = true;
+    indicarEstado('guardando');
+    const { error } = await configuracionService.actualizarConfiguracion({
+      razon_social: document.getElementById('cfgRazonSocial').value.trim(),
+      ruc: document.getElementById('cfgRuc').value.trim(),
+      telefono: document.getElementById('cfgTel').value.trim(),
+      email,
+      direccion: document.getElementById('cfgDireccion').value.trim(),
+      web: document.getElementById('cfgWeb').value.trim(),
+    });
+    indicarEstado('listo');
+    if (boton) boton.disabled = false;
+    if (error) { Toast.error('No se pudo guardar los datos de la empresa'); return; }
+    Toast.success('Datos de empresa guardados ✓');
+  }
+
+  /* ── Guardar: Notificaciones (preferencia visual local, sin backend) ─── */
+  function guardarNotif() {
+    const cfg = {
+      reserva: document.getElementById('cfgNotifReserva').checked,
+      pago: document.getElementById('cfgNotifPago').checked,
+      evento: document.getElementById('cfgNotifEvento').checked,
+      cancelado: document.getElementById('cfgNotifCancelado').checked,
+      cliente: document.getElementById('cfgNotifCliente').checked,
+    };
+    Storage.set('ep:pref:notif', cfg);
+    Toast.success('Preferencias guardadas ✓ (el envío real de notificaciones no está disponible aún)');
+  }
+
+  /* ── Guardar: Seguridad — cambio de contraseña vía Supabase Auth ─────── */
+  async function guardarSeguridad(boton) {
+    const actual = document.getElementById('cfgPassActual').value;
+    const nueva = document.getElementById('cfgPassNueva').value;
+    const confirmacion = document.getElementById('cfgPassConfirm').value;
+
+    if (!sesion?.email) { Toast.error('No se pudo determinar el correo de la sesión actual'); return; }
+    if (!actual) { Toast.error('Ingresa tu contraseña actual'); return; }
+    if (!nueva) { Toast.error('Ingresa la nueva contraseña'); return; }
+    if (nueva.length < 8) { Toast.error('La contraseña debe tener al menos 8 caracteres'); return; }
+    if (nueva !== confirmacion) { Toast.error('Las contraseñas no coinciden'); return; }
+    if (actual === nueva) { Toast.warning('La nueva contraseña debe ser diferente a la actual'); return; }
+
+    if (boton) boton.disabled = true;
     try {
-      const data = JSON.parse(e.target.result);
-      if (!data.version || !data.clientes) { Toast.error('Archivo JSON inválido'); return; }
-      const ok = await Confirm({ title:'¿Importar datos?', message:'Se reemplazarán los datos actuales con los del archivo. Esta acción no se puede deshacer.', okText:'Sí, importar' });
-      if (!ok) return;
-      const K = Data.K;
-      if (data.clientes)    Storage.set(K.CLIENTES,    data.clientes);
-      if (data.eventos)     Storage.set(K.EVENTOS,     data.eventos);
-      if (data.reservas)    Storage.set(K.RESERVAS,    data.reservas);
-      if (data.ingresos)    Storage.set(K.INGRESOS,    data.ingresos);
-      if (data.proveedores) Storage.set(K.PROVEEDORES, data.proveedores);
-      if (data.usuarios)    Storage.set(K.USUARIOS,    data.usuarios);
-      await Data.pushAllToFirestore();
-      Toast.success('Datos importados ✓ — Recargando…');
-      setTimeout(() => location.reload(), 1500);
-    } catch { Toast.error('Error al leer el archivo'); }
-  };
-  reader.readAsText(file);
-  event.target.value = '';
-}
+      const { error: reauthError } = await supabase.auth.signInWithPassword({ email: sesion.email, password: actual });
+      if (reauthError) { Toast.error('La contraseña actual es incorrecta'); return; }
 
-async function resetearDatos() {
-  const ok = await Confirm({
-    title: '¿Restablecer datos?',
-    message: 'Se eliminarán TODOS los datos actuales y se cargarán los datos de muestra iniciales. Esta acción no se puede deshacer.',
-    okText: 'Sí, restablecer',
-    type: 'danger'
-  });
-  if (!ok) return;
-  await Data.clearFirestoreData();
-  Storage.remove('ep:meta');
-  [Data.K.CLIENTES, Data.K.EVENTOS, Data.K.RESERVAS, Data.K.INGRESOS, Data.K.PROVEEDORES, Data.K.USUARIOS].forEach(k => Storage.remove(k));
-  Toast.success('Datos restablecidos ✓ — Recargando…');
-  setTimeout(() => location.reload(), 1500);
-}
+      const { error: updateError } = await supabase.auth.updateUser({ password: nueva });
+      if (updateError) { Toast.error(updateError.message || 'No se pudo actualizar la contraseña'); return; }
 
-/* ── Cargar configuración guardada ───────────────────────────────────── */
-function cargarConfig() {
-  const general = Storage.get('ep:config:general', {});
-  if (general.nombreSistema) document.getElementById('cfgNombreSistema').value = general.nombreSistema;
-  if (general.moneda) document.getElementById('cfgMoneda').value = general.moneda;
-  if (general.zona)   document.getElementById('cfgZona').value   = general.zona;
-  if (general.sidebarCollapsed !== undefined) document.getElementById('cfgSidebarCollapsed').checked = general.sidebarCollapsed;
+      Toast.success('Contraseña actualizada ✓');
+      ['cfgPassActual', 'cfgPassNueva', 'cfgPassConfirm'].forEach(id => document.getElementById(id).value = '');
+    } finally {
+      if (boton) boton.disabled = false;
+    }
+  }
 
-  const empresa = Storage.get('ep:config:empresa', {});
-  if (empresa.razonSocial) document.getElementById('cfgRazonSocial').value = empresa.razonSocial;
-  if (empresa.ruc)         document.getElementById('cfgRuc').value         = empresa.ruc;
-  if (empresa.telefono)    document.getElementById('cfgTel').value         = empresa.telefono;
-  if (empresa.email)       document.getElementById('cfgEmailEmp').value    = empresa.email;
-  if (empresa.direccion)   document.getElementById('cfgDireccion').value   = empresa.direccion;
-  if (empresa.web)         document.getElementById('cfgWeb').value         = empresa.web;
+  /* ── Info del sistema ─────────────────────────────────────────────────── */
+  function renderSysInfo() {
+    const el = document.getElementById('sysInfo');
+    const actualizado = configuracionActual?.updated_at
+      ? new Date(configuracionActual.updated_at).toLocaleDateString('es-PE')
+      : '—';
+    el.innerHTML = `
+      <div class="info-row"><span>Versión</span><span>v2.0.0</span></div>
+      <div class="info-row"><span>Última actualización</span><span>${actualizado}</span></div>
+      <div class="info-row"><span>Navegador</span><span>${navigator.userAgent.split(' ').pop()}</span></div>
+      <div class="info-row"><span>Almacenamiento</span><span>Supabase + Firebase Storage</span></div>`;
+  }
 
-  const notif = Storage.get('ep:config:notif', {});
-  if (notif.reserva   !== undefined) document.getElementById('cfgNotifReserva').checked   = notif.reserva;
-  if (notif.pago      !== undefined) document.getElementById('cfgNotifPago').checked      = notif.pago;
-  if (notif.evento    !== undefined) document.getElementById('cfgNotifEvento').checked    = notif.evento;
-  if (notif.cancelado !== undefined) document.getElementById('cfgNotifCancelado').checked = notif.cancelado;
-  if (notif.cliente   !== undefined) document.getElementById('cfgNotifCliente').checked   = notif.cliente;
-}
-
-/* ── Init ────────────────────────────────────────────────────────────── */
-cargarConfig();
-renderStorageInfo();
-renderSysInfo();
+  /* ── Init ────────────────────────────────────────────────────────────── */
+  aplicarPermisos();
+  cargarPreferenciasVisuales();
+  cargarConfiguracion();
 </script>
 
 <script type="module">
-  import { auth, db, storage } from './js/firebase.js';
-  import { doc, setDoc } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
-  import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
-  import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js';
+  import * as configuracionService from './js/services/configuracionService.js';
 
-  const MAX_MB = 5;
-  const ALLOWED = ['image/jpeg', 'image/png', 'image/webp'];
   const R = 15.5;
   const CIRC = 2 * Math.PI * R;
 
   const els = {
-    file:    document.getElementById('logoFile'),
+    file: document.getElementById('logoFile'),
     changeBtn: document.getElementById('logoChangeBtn'),
-    circle:  document.getElementById('logoCircle'),
+    circle: document.getElementById('logoCircle'),
     overlay: document.getElementById('logoUploadOverlay'),
-    ring:    document.getElementById('logoRingProgress'),
-    pct:     document.getElementById('logoPct'),
+    ring: document.getElementById('logoRingProgress'),
+    pct: document.getElementById('logoPct'),
     removeBtn: document.getElementById('logoRemoveBtn'),
     adminNote: document.getElementById('logoAdminNote'),
   };
@@ -547,25 +568,9 @@ renderSysInfo();
     els.adminNote.hidden = false;
   }
 
-  const authReady = new Promise(resolve => {
-    const unsub = onAuthStateChanged(auth, user => { unsub(); resolve(user); });
-  });
-
-  /* Borra el archivo anterior en Storage para no dejar huérfanos al
-     reemplazar el logo (se llama tanto al subir uno nuevo como al
-     eliminar el actual). */
-  const borrarLogoAnterior = async (path) => {
-    if (!path) return;
-    try { await deleteObject(ref(storage, path)); }
-    catch (err) { console.warn('No se pudo borrar el logo anterior en Storage', err); }
-  };
-
   els.file.addEventListener('change', async (e) => {
     const file = e.target.files[0];
     if (!file || uploading || !isAdmin) return;
-
-    if (!ALLOWED.includes(file.type)) { Toast.error('Solo se permiten imágenes JPG, PNG o WebP'); e.target.value = ''; return; }
-    if (file.size > MAX_MB * 1024 * 1024) { Toast.error(`El logo no debe superar ${MAX_MB}MB`); e.target.value = ''; return; }
 
     const anterior = AppLogo.get();
     const previewUrl = URL.createObjectURL(file);
@@ -574,44 +579,22 @@ renderSysInfo();
     uploading = true;
     showOverlay(true);
 
-    let etapa = 'autenticación';
-    try {
-      const fbUser = await authReady;
-      console.info('[logo] uid usado para la subida:', fbUser?.uid || '(sin sesión Firebase)');
+    const { data, error } = await configuracionService.subirLogo(file, setProgress);
 
-      etapa = 'subida a Storage';
-      const path = `logo/sistema/${Date.now()}_${file.name}`;
-      const sref = ref(storage, path);
-      const task = uploadBytesResumable(sref, file);
-
-      const url = await new Promise((resolve, reject) => {
-        task.on('state_changed',
-          snap => setProgress((snap.bytesTransferred / snap.totalBytes) * 100),
-          reject,
-          () => getDownloadURL(sref).then(resolve, reject)
-        );
-      });
-
-      etapa = 'guardado en Firestore';
-      await setDoc(doc(db, 'config', 'sistema'), { logoUrl: url, logoPath: path, updatedAt: new Date().toISOString() }, { merge: true });
-
-      etapa = 'borrado del logo anterior';
-      await borrarLogoAnterior(anterior?.path); // reemplazo limpio, sin archivos huérfanos
-
-      AppLogo.setLocal({ url, path });
-      renderLogo(url);
-      Toast.success('Logo del sistema actualizado ✓');
-    } catch (err) {
-      console.error(`[logo] Falló en la etapa "${etapa}":`, err);
+    if (error) {
+      console.error('[logo] No se pudo subir el logo:', error);
       renderLogo(anterior?.url || '');
-      const code = err?.code ? ` (${err.code})` : '';
-      Toast.show(`No se pudo subir el logo — falló en "${etapa}"${code}. Revisa la consola (F12) para más detalle.`, 'error', 6000);
-    } finally {
-      uploading = false;
-      showOverlay(false);
-      e.target.value = '';
-      URL.revokeObjectURL(previewUrl);
+      Toast.show(`No se pudo subir el logo — ${error}. Revisa la consola (F12) para más detalle.`, 'error', 6000);
+    } else {
+      AppLogo.setLocal({ url: data.url, path: data.path });
+      renderLogo(data.url);
+      Toast.success('Logo del sistema actualizado ✓');
     }
+
+    uploading = false;
+    showOverlay(false);
+    e.target.value = '';
+    URL.revokeObjectURL(previewUrl);
   });
 
   els.removeBtn.addEventListener('click', async () => {
@@ -621,18 +604,15 @@ renderSysInfo();
     const ok = await Confirm({ title: 'Eliminar logo del sistema', message: 'Toda la aplicación volverá a mostrar el logo predeterminado de Memory.', okText: 'Eliminar', type: 'danger' });
     if (!ok) return;
 
-    try {
-      await authReady;
-      await setDoc(doc(db, 'config', 'sistema'), { logoUrl: '', logoPath: '', updatedAt: new Date().toISOString() }, { merge: true });
-      await borrarLogoAnterior(actual.path);
-      AppLogo.setLocal(null);
-      renderLogo('');
-      Toast.success('Logo eliminado, se restauró el predeterminado ✓');
-    } catch (err) {
-      console.error('[logo] No se pudo eliminar el logo del sistema:', err);
-      const code = err?.code ? ` (${err.code})` : '';
-      Toast.show(`No se pudo eliminar el logo${code}. Revisa la consola (F12) para más detalle.`, 'error', 6000);
+    const { error } = await configuracionService.eliminarLogo();
+    if (error) {
+      console.error('[logo] No se pudo eliminar el logo del sistema:', error);
+      Toast.show(`No se pudo eliminar el logo — ${error}. Revisa la consola (F12) para más detalle.`, 'error', 6000);
+      return;
     }
+    AppLogo.setLocal(null);
+    renderLogo('');
+    Toast.success('Logo eliminado, se restauró el predeterminado ✓');
   });
 
   /* Pintado inicial con lo que ya esté cacheado/sincronizado */
