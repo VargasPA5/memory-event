@@ -1,29 +1,76 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Memory – Calendario</title>
+  <title>Memory - Calendario Operativo</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Dancing+Script:wght@700&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="css/styles.css"/>
   <script src="js/theme.js"></script>
   <script src="js/logo.js"></script>
   <style>
-    .cal-layout{display:grid;grid-template-columns:1fr 280px;gap:16px;align-items:start;}
-    .upcoming-list{display:flex;flex-direction:column;gap:0;}
-    .upcoming-item{padding:12px 16px;border-bottom:1px solid var(--card-border);display:flex;flex-direction:column;gap:3px;transition:background var(--t);}
-    .upcoming-item:last-child{border-bottom:none;}
-    .upcoming-item:hover{background:var(--main-bg);}
-    .upcoming-name{font-size:13.5px;font-weight:600;}
-    .upcoming-meta{font-size:12px;color:var(--txt-muted);}
-    .event-popup{position:fixed;background:var(--card-bg);border:1px solid var(--card-border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);padding:16px;width:240px;z-index:200;display:none;}
-    .event-popup.open{display:block;}
-    .event-popup h4{font-size:14px;font-weight:700;margin-bottom:8px;}
-    .event-popup-row{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--txt-secondary);margin-bottom:5px;}
-    .event-popup-row svg{width:14px;height:14px;color:var(--txt-muted);flex-shrink:0;}
-    .event-popup-close{position:absolute;top:10px;right:10px;background:none;border:none;cursor:pointer;color:var(--txt-muted);font-size:16px;}
-    @media(max-width:900px){.cal-layout{grid-template-columns:1fr;}}
+    .op-layout{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;align-items:start}
+    .op-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;flex-wrap:wrap}
+    .op-nav{display:flex;align-items:center;gap:8px}
+    .op-title{min-width:220px;text-align:center;font-size:18px;font-weight:700}
+    .op-tabs{display:flex;gap:4px;align-items:center}
+    .op-filters{display:grid;grid-template-columns:repeat(5,minmax(130px,1fr));gap:8px;margin-bottom:12px}
+    .op-filter-checks{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+    .op-filter-checks label{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--txt-secondary);background:var(--card-bg);border:1px solid var(--card-border);border-radius:8px;padding:8px 10px}
+    .op-month{display:grid;grid-template-columns:repeat(7,1fr);background:var(--card-bg);border:1px solid var(--card-border);border-radius:var(--radius-lg);overflow:hidden}
+    .op-day-name{padding:10px;text-align:center;font-size:11.5px;font-weight:700;color:var(--txt-muted);text-transform:uppercase;border-bottom:1px solid var(--card-border)}
+    .op-day{min-height:128px;padding:8px;border-right:1px solid var(--card-border);border-bottom:1px solid var(--card-border);background:var(--card-bg)}
+    .op-day:nth-child(7n+7){border-right:none}
+    .op-day header{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+    .op-day header span{font-size:12px;font-weight:700;color:var(--txt-secondary)}
+    .op-day header strong{font-size:11px;color:var(--txt-muted)}
+    .op-day--muted{background:var(--main-bg);opacity:.65}
+    .op-day--today header span{background:var(--accent);color:#1a1917;border-radius:999px;min-width:24px;height:24px;display:inline-grid;place-items:center}
+    .op-day__events{display:flex;flex-direction:column;gap:4px}
+    .op-event{width:100%;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:6px;border:0;border-left:3px solid var(--accent);border-radius:6px;padding:5px 7px;color:var(--txt-primary);cursor:pointer;text-align:left;min-height:28px}
+    .op-event:hover{filter:brightness(.98)}
+    .op-event__time{font-size:10.5px;color:var(--txt-muted)}
+    .op-event__title{font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .op-event__alerts{display:flex;gap:3px}
+    .op-alert{width:7px;height:7px;border-radius:50%;display:inline-block}
+    .op-alert--critica{background:var(--red)}
+    .op-alert--advertencia{background:var(--yellow)}
+    .op-alert--info{background:var(--blue)}
+    .op-more{font-size:11px;color:var(--txt-muted);padding:2px 4px}
+    .op-week{display:grid;grid-template-columns:repeat(7,1fr);gap:8px}
+    .op-week-day{background:var(--card-bg);border:1px solid var(--card-border);border-radius:var(--radius-lg);min-height:380px;padding:10px}
+    .op-week-day header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;font-size:12px}
+    .op-agenda{display:flex;flex-direction:column;gap:8px}
+    .op-agenda-item{background:var(--card-bg);border:1px solid var(--card-border);border-radius:var(--radius-lg);padding:10px}
+    .op-agenda-item p{font-size:12px;color:var(--txt-muted);margin-top:6px}
+    .op-empty,.op-muted{font-size:12px;color:var(--txt-muted)}
+    .op-upcoming{width:100%;padding:12px 16px;border:0;border-bottom:1px solid var(--card-border);background:transparent;text-align:left;cursor:pointer;display:flex;flex-direction:column;gap:3px}
+    .op-upcoming:hover{background:var(--main-bg)}
+    .op-upcoming strong{font-size:13px}
+    .op-upcoming span,.op-summary-row span{font-size:12px;color:var(--txt-muted)}
+    .op-summary-row{display:flex;justify-content:space-between;align-items:center;font-size:13.5px}
+    .op-panel{position:fixed;top:0;right:0;width:min(440px,100vw);height:100vh;background:var(--card-bg);border-left:1px solid var(--card-border);box-shadow:var(--shadow-lg);z-index:260;transform:translateX(105%);transition:transform var(--t);display:flex;flex-direction:column}
+    .op-panel.open{transform:translateX(0)}
+    .op-panel-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:18px;border-bottom:1px solid var(--card-border)}
+    .op-panel-head span{font-size:12px;color:var(--txt-muted)}
+    .op-panel-head h3{font-size:18px;font-weight:700;margin-top:3px}
+    .op-panel-body{padding:16px;overflow:auto;display:flex;flex-direction:column;gap:12px}
+    .op-panel-loading{padding:24px;color:var(--txt-muted)}
+    .op-panel-section{border:1px solid var(--card-border);border-radius:8px;padding:12px;background:var(--main-bg)}
+    .op-panel-section h4{font-size:13px;font-weight:700;margin-bottom:8px}
+    .op-panel-summary p{font-size:12.5px;color:var(--txt-secondary);margin-top:5px}
+    .op-money-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+    .op-money-grid div{background:var(--card-bg);border:1px solid var(--card-border);border-radius:6px;padding:8px}
+    .op-money-grid span{display:block;font-size:11px;color:var(--txt-muted);margin-bottom:2px}
+    .op-line{display:flex;flex-direction:column;gap:2px;padding:8px 0;border-bottom:1px solid var(--card-border);text-decoration:none;color:inherit}
+    .op-line:last-child{border-bottom:0}
+    .op-line strong{font-size:12.5px}
+    .op-line span{font-size:12px;color:var(--txt-muted)}
+    .op-check{display:flex;align-items:center;gap:8px;font-size:12.5px;padding:5px 0}
+    .op-actions{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+    @media(max-width:1100px){.op-layout{grid-template-columns:1fr}.op-filters{grid-template-columns:repeat(2,1fr)}}
+    @media(max-width:760px){.op-filters{grid-template-columns:1fr}.op-month{display:block}.op-day-name{display:none}.op-day{min-height:auto;border-right:0}.op-week{grid-template-columns:1fr}.op-title{text-align:left;min-width:auto}.op-actions{grid-template-columns:1fr}}
   </style>
 </head>
 <body>
@@ -31,11 +78,13 @@
   <div class="sidebar-overlay" id="sidebarOverlay"></div>
   <main class="main" id="main">
     <div class="page-wrapper">
-
       <div class="page-header">
-        <div><h1>Calendario</h1><p>Visualiza todos los eventos en el calendario mensual.</p></div>
+        <div>
+          <h1>Calendario Operativo <span class="storage-indicator"><span class="storage-dot" id="calendarDot"></span><span id="calendarStatus">Actualizado</span></span></h1>
+          <p>Planifica eventos, reservas, pagos, proveedores, agenda y pendientes desde una sola vista.</p>
+        </div>
         <div class="page-actions">
-          <button class="btn btn--outline" onclick="irHoy()">Hoy</button>
+          <button class="btn btn--outline" id="btnHoy">Hoy</button>
           <a href="eventos.html" class="btn btn--primary">
             <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/></svg>
             Nuevo Evento
@@ -43,261 +92,137 @@
         </div>
       </div>
 
-      <div class="cal-layout">
-        <!-- Calendario principal -->
-        <div>
-          <!-- Nav bar -->
-          <div class="cal-nav-bar" style="margin-bottom:12px">
-            <div class="cal-nav-controls">
-              <button class="cal-nav-btn" onclick="cambiarMes(-1)">
-                <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
-              </button>
-              <h2 id="mesAnio" style="min-width:180px;text-align:center">—</h2>
-              <button class="cal-nav-btn" onclick="cambiarMes(1)">
-                <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"/></svg>
-              </button>
-            </div>
-            <div class="cal-view-tabs">
-              <button class="cal-tab active" id="tabMes" onclick="setVista('mes',this)">Mes</button>
-              <button class="cal-tab" id="tabSem" onclick="setVista('semana',this)">Semana</button>
-            </div>
-          </div>
-
-          <!-- Grid -->
-          <div class="cal-wrap">
-            <div class="cal-grid-header">
-              <div class="cal-day-name">Dom</div><div class="cal-day-name">Lun</div>
-              <div class="cal-day-name">Mar</div><div class="cal-day-name">Mié</div>
-              <div class="cal-day-name">Jue</div><div class="cal-day-name">Vie</div>
-              <div class="cal-day-name">Sáb</div>
-            </div>
-            <div class="cal-grid" id="calGrid"></div>
-          </div>
-
-          <!-- Leyenda -->
-          <div class="cal-legend" style="margin-top:12px">
-            <div class="cal-legend-item"><div class="cal-legend-dot" style="background:#c9a35a"></div>Boda</div>
-            <div class="cal-legend-item"><div class="cal-legend-dot" style="background:#f59e0b"></div>Cumpleaños</div>
-            <div class="cal-legend-item"><div class="cal-legend-dot" style="background:#3b82f6"></div>Corporativo</div>
-            <div class="cal-legend-item"><div class="cal-legend-dot" style="background:#10b981"></div>Graduación</div>
-            <div class="cal-legend-item"><div class="cal-legend-dot" style="background:#ec4899"></div>Quinceañero</div>
-            <div class="cal-legend-item"><div class="cal-legend-dot" style="background:#94a3b8"></div>Otros</div>
-          </div>
+      <div class="op-toolbar">
+        <div class="op-nav">
+          <button class="cal-nav-btn" id="btnPrev"><svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd"/></svg></button>
+          <div class="op-title" id="periodTitle">-</div>
+          <button class="cal-nav-btn" id="btnNext"><svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"/></svg></button>
         </div>
-
-        <!-- Panel lateral -->
-        <div>
-          <div class="card" style="margin-bottom:12px">
-            <div class="card-header"><h3>Próximos eventos</h3><a href="eventos.html" class="link-sm">Ver todos</a></div>
-            <div class="upcoming-list" id="upcomingList"></div>
-          </div>
-
-          <div class="card">
-            <div class="card-header"><h3>Resumen del mes</h3></div>
-            <div class="card-body">
-              <div style="display:flex;flex-direction:column;gap:10px" id="mesResumen"></div>
-            </div>
-          </div>
+        <div class="op-tabs">
+          <button class="cal-tab" data-view="mes">Mes</button>
+          <button class="cal-tab" data-view="semana">Semana</button>
+          <button class="cal-tab" data-view="dia">Día</button>
+          <button class="cal-tab" data-view="agenda">Agenda</button>
         </div>
       </div>
 
+      <div class="op-filters">
+        <select class="filter-select" id="fEstado"><option value="">Todos los estados</option><option>Pendiente</option><option>Confirmado</option><option>Realizado</option><option>Cancelado</option></select>
+        <select class="filter-select" id="fTipo"></select>
+        <select class="filter-select" id="fCliente"></select>
+        <select class="filter-select" id="fProveedor"></select>
+        <select class="filter-select" id="fPlanificador"></select>
+      </div>
+      <div class="op-filter-checks">
+        <label><input type="checkbox" id="f_pagosPendientes"/> Pagos pendientes</label>
+        <label><input type="checkbox" id="f_saldoPendiente"/> Saldo pendiente</label>
+        <label><input type="checkbox" id="f_sinProveedor"/> Sin proveedor</label>
+        <label><input type="checkbox" id="f_sinReserva"/> Sin reserva</label>
+        <label><input type="checkbox" id="f_checklistIncompleto"/> Checklist incompleto</label>
+        <label><input type="checkbox" id="f_conAnexos"/> Con anexos</label>
+        <label><input type="checkbox" id="f_conComentarios"/> Con comentarios</label>
+        <label><input type="checkbox" id="f_conAgenda"/> Con agenda</label>
+        <button class="btn btn--outline" id="btnLimpiarFiltros" type="button">Limpiar filtros</button>
+      </div>
+
+      <div class="op-layout">
+        <div id="calendarCanvas"></div>
+        <aside>
+          <div class="card" style="margin-bottom:12px">
+            <div class="card-header"><h3>Próximos eventos</h3><a href="eventos.html" class="link-sm">Ver todos</a></div>
+            <div id="upcomingList"></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><h3>Resumen visible</h3></div>
+            <div class="card-body"><div style="display:flex;flex-direction:column;gap:10px" id="mesResumen"></div></div>
+          </div>
+        </aside>
+      </div>
     </div>
   </main>
 </div>
 
-<!-- Popup de evento -->
-<div class="event-popup" id="eventPopup">
-  <button class="event-popup-close" onclick="cerrarPopup()">✕</button>
-  <h4 id="popupNombre">—</h4>
-  <div class="event-popup-row">
-    <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd"/></svg>
-    <span id="popupFecha">—</span>
-  </div>
-  <div class="event-popup-row">
-    <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"/></svg>
-    <span id="popupCliente">—</span>
-  </div>
-  <div class="event-popup-row">
-    <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"/></svg>
-    <span id="popupLugar">—</span>
-  </div>
-  <div style="margin-top:10px" id="popupEstado"></div>
-</div>
-
+<aside class="op-panel" id="calendarPanel" aria-live="polite"></aside>
 <div id="toast-container"></div>
+
 <script src="js/storage.js"></script>
 <script src="js/auth.js"></script>
-<script src="js/data.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/app.js"></script>
-<script>
-const MESES_NOMBRE = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-const MESES_CORTO  = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
-const TIPO_CSS = { 'Boda':'boda','Cumpleaños':'cumple','Corporativo':'corp','Graduación':'grad','Quinceañero':'quince','Otros':'otro' };
+<script type="module">
+import * as calendarioService from './js/services/calendarioService.js';
+import { state, setView, movePeriod, goToday, getVisibleRange, toISODate } from './js/calendar/calendarState.js';
+import { initFilters, populateFilterOptions } from './js/calendar/calendarFilters.js';
+import { renderCalendar } from './js/calendar/calendarViews.js';
+import { openPanelLoading, renderPanel, closePanel } from './js/calendar/calendarPanel.js';
+import { createCalendarRealtime } from './js/calendar/calendarRealtime.js';
 
-let año = new Date().getFullYear();
-let mes = new Date().getMonth();
-let vista = 'mes';
+const realtime = createCalendarRealtime();
 
-function tipoCSS(tipo) { return TIPO_CSS[tipo] || 'otro'; }
+function setLoading(loading) {
+  const dot = document.getElementById('calendarDot');
+  const status = document.getElementById('calendarStatus');
+  dot?.classList.toggle('saving', loading);
+  if (status) status.textContent = loading ? 'Cargando...' : 'Actualizado';
+}
 
-/* ── Render calendario ─────────────────────────────────────────────── */
-function renderCalendario() {
-  const grid  = document.getElementById('calGrid');
-  const hoy   = new Date();
-  const eventos = Data.eventos.getAll();
-
-  document.getElementById('mesAnio').textContent = `${MESES_NOMBRE[mes]} ${año}`;
-  grid.innerHTML = '';
-
-  const primerDia   = new Date(año, mes, 1).getDay();
-  const diasEnMes   = new Date(año, mes+1, 0).getDate();
-  const diasMesAnt  = new Date(año, mes, 0).getDate();
-  const totalCeldas = primerDia + diasEnMes;
-  const filasNec    = Math.ceil(totalCeldas / 7);
-  const totalSlots  = filasNec * 7;
-
-  for (let slot = 0; slot < totalSlots; slot++) {
-    const cell = document.createElement('div');
-    let diaNum, esMesActual = false;
-
-    if (slot < primerDia) {
-      diaNum = diasMesAnt - primerDia + 1 + slot;
-      cell.className = 'cal-cell other-month';
-    } else if (slot < primerDia + diasEnMes) {
-      diaNum = slot - primerDia + 1;
-      esMesActual = true;
-      const esHoy = diaNum === hoy.getDate() && mes === hoy.getMonth() && año === hoy.getFullYear();
-      cell.className = 'cal-cell' + (esHoy ? ' today' : '');
-    } else {
-      diaNum = slot - primerDia - diasEnMes + 1;
-      cell.className = 'cal-cell other-month';
-    }
-
-    const numEl = document.createElement('div');
-    numEl.className = 'day-num';
-    numEl.textContent = diaNum;
-    cell.appendChild(numEl);
-
-    if (esMesActual) {
-      const fechaStr = `${año}-${String(mes+1).padStart(2,'0')}-${String(diaNum).padStart(2,'0')}`;
-      const evsDia = eventos.filter(e => e.fecha === fechaStr);
-      evsDia.forEach(ev => {
-        const evEl = document.createElement('div');
-        evEl.className = `cal-event ${tipoCSS(ev.tipo)}`;
-        evEl.textContent = ev.nombre;
-        evEl.title = ev.nombre;
-        evEl.onclick = (e) => { e.stopPropagation(); mostrarPopup(ev, e); };
-        cell.appendChild(evEl);
-      });
-    }
-    grid.appendChild(cell);
+async function cargarEventos() {
+  setLoading(true);
+  const { start, end } = getVisibleRange();
+  const { data, error } = await calendarioService.getEventos({
+    desde: toISODate(start),
+    hasta: toISODate(end),
+    filtros: state.filtros,
+  });
+  setLoading(false);
+  if (error) {
+    Toast.error('Error al cargar calendario: ' + error);
+    return;
   }
-
-  renderUpcoming();
-  renderResumenMes();
+  state.eventos = data || [];
+  renderCalendar(abrirDetalle);
 }
 
-/* ── Popup ─────────────────────────────────────────────────────────── */
-function mostrarPopup(ev, e) {
-  const popup = document.getElementById('eventPopup');
-  document.getElementById('popupNombre').textContent  = ev.nombre;
-  document.getElementById('popupFecha').textContent   = `${Fmt.dateShort(ev.fecha)} ${ev.hora ? '· '+ev.hora : ''}`;
-  document.getElementById('popupCliente').textContent = Data.clienteNombre(ev.clienteId);
-  document.getElementById('popupLugar').textContent   = ev.lugar || 'Sin especificar';
-  document.getElementById('popupEstado').innerHTML    = badge(ev.estado);
-
-  const rect = e.currentTarget.getBoundingClientRect();
-  popup.style.top  = (rect.bottom + window.scrollY + 6) + 'px';
-  popup.style.left = Math.min(rect.left, window.innerWidth - 260) + 'px';
-  popup.classList.add('open');
+async function abrirDetalle(eventoId) {
+  state.selectedEventId = eventoId;
+  openPanelLoading();
+  const { data, error } = await calendarioService.getEventoDetalle(eventoId);
+  if (error) {
+    Toast.error('Error al cargar detalle del evento: ' + error);
+    closePanel();
+    return;
+  }
+  renderPanel(data);
 }
-function cerrarPopup() { document.getElementById('eventPopup').classList.remove('open'); }
-document.addEventListener('click', e => {
-  if (!document.getElementById('eventPopup').contains(e.target)) cerrarPopup();
+
+async function cargarOpciones() {
+  const { data, error } = await calendarioService.getOpcionesFiltros();
+  if (error) {
+    Toast.warning('No se pudieron cargar todos los filtros');
+    return;
+  }
+  populateFilterOptions(data);
+}
+
+document.getElementById('btnPrev').addEventListener('click', () => { movePeriod(-1); cargarEventos(); });
+document.getElementById('btnNext').addEventListener('click', () => { movePeriod(1); cargarEventos(); });
+document.getElementById('btnHoy').addEventListener('click', () => { goToday(); cargarEventos(); });
+document.querySelectorAll('[data-view]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    setView(btn.dataset.view);
+    cargarEventos();
+  });
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closePanel();
 });
 
-/* ── Próximos eventos ──────────────────────────────────────────────── */
-function renderUpcoming() {
-  const hoy = new Date();
-  const list = document.getElementById('upcomingList');
-  const proximos = Data.eventos.getAll()
-    .filter(e => e.estado !== 'Cancelado' && e.fecha && new Date(e.fecha+'T00:00:00') >= hoy)
-    .sort((a,b) => new Date(a.fecha) - new Date(b.fecha))
-    .slice(0,6);
+await cargarOpciones();
+initFilters(cargarEventos);
+renderCalendar(abrirDetalle);
+cargarEventos();
 
-  list.innerHTML = '';
-  if (!proximos.length) {
-    list.innerHTML = '<div class="empty-state" style="padding:24px"><p>Sin eventos próximos</p></div>';
-    return;
-  }
-  proximos.forEach(ev => {
-    const d = new Date(ev.fecha+'T00:00:00');
-    const item = document.createElement('div');
-    item.className = 'upcoming-item';
-    item.innerHTML = `
-      <div style="display:flex;align-items:center;justify-content:space-between">
-        <span class="upcoming-name ev-n"></span>
-        ${badge(ev.estado)}
-      </div>
-      <div class="upcoming-meta ev-m"></div>`;
-    item.querySelector('.ev-n').textContent = ev.nombre;
-    item.querySelector('.ev-m').textContent = `${d.getDate()} ${MESES_CORTO[d.getMonth()]} · ${ev.hora||''}`;
-    list.appendChild(item);
-  });
-}
-
-/* ── Resumen del mes ───────────────────────────────────────────────── */
-function renderResumenMes() {
-  const container = document.getElementById('mesResumen');
-  const evsMes = Data.eventos.getAll().filter(e => {
-    if (!e.fecha) return false;
-    const d = new Date(e.fecha+'T00:00:00');
-    return d.getMonth()===mes && d.getFullYear()===año;
-  });
-  const items = [
-    { label:'Total eventos', value: evsMes.length },
-    { label:'Confirmados',   value: evsMes.filter(e=>e.estado==='Confirmado').length },
-    { label:'Pendientes',    value: evsMes.filter(e=>e.estado==='Pendiente').length },
-    { label:'Cancelados',    value: evsMes.filter(e=>e.estado==='Cancelado').length },
-  ];
-  container.innerHTML = '';
-  items.forEach(it => {
-    const row = document.createElement('div');
-    row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;font-size:13.5px';
-    row.innerHTML = `<span style="color:var(--txt-secondary)">${escHtml(it.label)}</span><strong>${it.value}</strong>`;
-    container.appendChild(row);
-  });
-}
-
-/* ── Navegación ────────────────────────────────────────────────────── */
-function cambiarMes(dir) {
-  mes += dir;
-  if (mes > 11) { mes=0; año++; }
-  if (mes < 0)  { mes=11; año--; }
-  renderCalendario();
-}
-
-function irHoy() {
-  const hoy = new Date();
-  año = hoy.getFullYear();
-  mes = hoy.getMonth();
-  renderCalendario();
-}
-
-function setVista(v, btn) {
-  if (v === 'semana') {
-    Toast.info('Vista semanal próximamente disponible');
-    return;
-  }
-  vista = v;
-  document.querySelectorAll('.cal-tab').forEach(t=>t.classList.remove('active'));
-  btn.classList.add('active');
-  renderCalendario();
-}
-
-/* ── Init ───────────────────────────────────────────────────────────── */
-renderCalendario();
+window.addEventListener('beforeunload', () => realtime.stop());
 </script>
 </body>
 </html>
