@@ -123,6 +123,10 @@ const buildTopbarHTML = () => {
       <input type="text" placeholder="Buscar en Memory..." id="globalSearch"/>
     </div>
     <div class="topbar__right">
+      <a href="index.html" class="topbar__public-home" title="Ir al inicio público">
+        <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9.293 2.293a1 1 0 011.414 0l7 7A1 1 0 0117 11h-1v5a2 2 0 01-2 2h-2.5a.5.5 0 01-.5-.5V13a1 1 0 10-2 0v4.5a.5.5 0 01-.5.5H6a2 2 0 01-2-2v-5H3a1 1 0 01-.707-1.707l7-7z" clip-rule="evenodd"/></svg>
+        <span>Inicio</span>
+      </a>
       <button class="topbar__theme" id="themeToggle" title="Cambiar tema">
         <svg id="themeIconSun" viewBox="0 0 20 20" fill="currentColor" style="display:${isDark ? 'block' : 'none'}"><path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 9a1 1 0 110 2h-1a1 1 0 110-2h1zM4 9a1 1 0 110 2H3a1 1 0 110-2h1zm9.193 6.243a1 1 0 011.414 0l.707.707a1 1 0 11-1.414 1.414l-.707-.707a1 1 0 010-1.414zM4.464 4.343a1 1 0 011.414 1.414l-.707.707A1 1 0 013.757 5.05l.707-.707zM10 17a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zm-5.536-1.757a1 1 0 010 1.414l-.707.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0z"/></svg>
         <svg id="themeIconMoon" viewBox="0 0 20 20" fill="currentColor" style="display:${isDark ? 'none' : 'block'}"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"/></svg>
