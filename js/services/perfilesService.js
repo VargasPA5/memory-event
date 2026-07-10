@@ -96,9 +96,9 @@ export const actualizarRol = async (id, rol) => {
    Cada usuario sube únicamente a su propia carpeta {uid}/... (impuesto por
    RLS sobre storage.objects, ver 20260709000016). No se borra el avatar
    anterior en Storage al reemplazarlo: `perfiles` no guarda un storage_path
-   separado del `avatar_url` (mismo comportamiento que tenía el flujo previo
-   con Firebase), así que un reemplazo deja el archivo viejo huérfano en el
-   bucket — aceptable para este alcance, revisar si el volumen crece. */
+   separado del `avatar_url`, así que un reemplazo deja el archivo viejo
+   huérfano en el bucket — aceptable para este alcance, revisar si el volumen
+   crece. */
 const AVATAR_BUCKET = 'avatars';
 const MAX_AVATAR_MB = 5;
 const TIPOS_AVATAR_PERMITIDOS = ['image/jpeg', 'image/png', 'image/webp'];

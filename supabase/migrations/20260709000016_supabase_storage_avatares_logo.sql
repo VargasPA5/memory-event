@@ -1,12 +1,11 @@
 -- ============================================================================
 -- Memory Events — 0016: Supabase Storage — avatares y logo del sistema
 -- ============================================================================
--- Reemplaza Firebase Storage para estos dos flujos (avatar de usuario y logo
--- del sistema). Buckets públicos de lectura — los avatares y el logo se
--- pintan en <img> incluso sin sesión (sidebar, topbar, login), igual que
--- antes con las URLs de descarga de Firebase — con escritura restringida por
--- RLS sobre storage.objects, mismo patrón de ownership que el resto del
--- proyecto (propietario por carpeta / es_administrador()).
+-- Buckets públicos de lectura para avatar de usuario y logo del sistema.
+-- Los avatares y el logo se pintan en <img> incluso sin sesión (sidebar,
+-- topbar, login), con escritura restringida por RLS sobre storage.objects,
+-- mismo patrón de ownership que el resto del proyecto (propietario por
+-- carpeta / es_administrador()).
 
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values
@@ -20,9 +19,8 @@ on conflict (id) do nothing;
 -- objects" (42501). Basta con crear las políticas directamente.
 
 -- 16.1 avatars: cada usuario administra únicamente su propia carpeta
--- {auth.uid()}/archivo — igual convención de rutas que usaba Firebase
--- (avatars/{uid}/...), solo que aquí el uid es el primer segmento del
--- nombre de objeto dentro del bucket, no un prefijo del bucket.
+-- {auth.uid()}/archivo: el uid es el primer segmento del nombre de objeto
+-- dentro del bucket.
 create policy avatars_select on storage.objects for select
   using (bucket_id = 'avatars');
 

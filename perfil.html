@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8"/>
@@ -243,7 +243,6 @@
 </div>
 
 <div id="toast-container"></div>
-<script src="js/storage.js"></script>
 <script src="js/auth.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/app.js"></script>
@@ -376,9 +375,8 @@ cargarPerfil();
     removeBtn: document.getElementById('avatarRemoveBtn'),
     heroAvatar:document.getElementById('heroAvatar'),
   };
-  /* Supabase Storage no expone progreso de subida por bytes (a diferencia de
-     Firebase antes), así que el anillo se muestra como spinner indeterminado
-     en vez de un porcentaje real: un arco fijo (25% de la circunferencia)
+  /* Supabase Storage no expone progreso de subida por bytes, así que el anillo
+     se muestra como spinner indeterminado en vez de un porcentaje real: un arco fijo (25% de la circunferencia)
      girando con la animación `spin` ya existente en css/styles.css. */
   const R = 15.5;
   const CIRC = 2 * Math.PI * R;

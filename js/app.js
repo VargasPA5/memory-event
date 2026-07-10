@@ -373,11 +373,19 @@ const initSidebarToggle = () => {
   const PREF_KEY = 'ep:sidebar-collapsed';
   if (!sidebar) return;
 
-  if (Storage.get(PREF_KEY)) sidebar.classList.add('collapsed');
+  const getSidebarPref = () => {
+    try { return JSON.parse(localStorage.getItem(PREF_KEY) || 'false'); }
+    catch { return false; }
+  };
+  const setSidebarPref = (value) => {
+    try { localStorage.setItem(PREF_KEY, JSON.stringify(value)); } catch {}
+  };
+
+  if (getSidebarPref()) sidebar.classList.add('collapsed');
 
   document.getElementById('sidebarToggle')?.addEventListener('click', () => {
     sidebar.classList.toggle('collapsed');
-    Storage.set(PREF_KEY, sidebar.classList.contains('collapsed'));
+    setSidebarPref(sidebar.classList.contains('collapsed'));
   });
 };
 

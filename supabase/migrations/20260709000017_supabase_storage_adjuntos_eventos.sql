@@ -1,13 +1,11 @@
 -- ============================================================================
 -- Memory Events — 0017: Supabase Storage — adjuntos de eventos
 -- ============================================================================
--- Reemplaza el último uso restante de Firebase Storage: los anexos
--- (fotos/videos) de `evento_anexos` en eventos.html. Bucket público de
--- lectura (mismo criterio que 0016: las URLs ya eran efectivamente públicas
--- con Firebase, un download token no expira); escritura restringida por RLS
--- sobre storage.objects, validando contra la fila real de `eventos` — mismo
--- criterio de ownership que ya protege evento_anexos a nivel de tabla
--- (RLS 7.5: planificador_id = auth.uid() or es_administrador()).
+-- Bucket público de lectura para los anexos (fotos/videos) de
+-- `evento_anexos` en eventos.html; escritura restringida por RLS sobre
+-- storage.objects, validando contra la fila real de `eventos` — mismo criterio
+-- de ownership que ya protege evento_anexos a nivel de tabla (RLS 7.5:
+-- planificador_id = auth.uid() or es_administrador()).
 
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values (

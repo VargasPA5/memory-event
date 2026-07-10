@@ -111,10 +111,8 @@ const Auth = (() => {
   };
 
   /* Actualiza campos propios (nombre/cargo/telefono) en `perfiles` y refresca
-     la sesión. No incluye email ni avatar: el email vive en auth.users
-     (cambiarlo implica el flujo de verificación de Supabase, fuera del
-     alcance de esta fase) y el avatar sigue subiéndose a Firebase Storage
-     (tampoco migrado todavía). */
+     la sesión. No incluye email: vive en auth.users y cambiarlo implica el
+     flujo de verificación de Supabase, fuera del alcance de esta fase. */
   const updatePerfil = async (cambios) => {
     const cur = get();
     if (!cur) return { ok: false, error: 'No hay sesión activa' };
