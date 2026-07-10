@@ -92,8 +92,8 @@
       <button class="modal-close" onclick="cerrarModal()">✕</button>
     </div>
     <div class="form-row">
-      <div class="form-group"><label>Cliente</label><select class="form-select" id="fCliente"></select></div>
-      <div class="form-group"><label>Reserva</label><select class="form-select" id="fReserva"></select></div>
+      <div class="form-group"><label>Cliente</label><select class="form-select" id="fCliente" disabled></select></div>
+      <div class="form-group"><label>Reserva</label><select class="form-select" id="fReserva" onchange="onReservaChange()"></select></div>
     </div>
     <div class="form-group"><label>Concepto</label><input type="text" class="form-input" id="fConcepto" placeholder="Ej: Adelanto reserva RES-001"/></div>
     <div class="form-row">
@@ -114,29 +114,55 @@
 <div id="toast-container"></div>
 <script src="js/storage.js"></script>
 <script src="js/auth.js"></script>
-<script src="js/data.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/app.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
-<script src="js/boletas.js"></script>
-<script>
+<script type="module">
+import * as ingresosService from './js/services/ingresosService.js';
+import * as reservasService from './js/services/reservasService.js';
+
 let editandoId = null;
+let todosLosIngresos = [];
+let reservasDisponibles = [];
+
+window.renderTabla = renderTabla;
+window.abrirModal = abrirModal;
+window.cerrarModal = cerrarModal;
+window.guardarPago = guardarPago;
+window.editarPago = editarPago;
+window.verBoleta = verBoleta;
+window.pedirEliminar = pedirEliminar;
+window.exportarCSV = exportarCSV;
+window.onReservaChange = onReservaChange;
 
 function poblarSelects() {
   const selCl = document.getElementById('fCliente');
   const selRe = document.getElementById('fReserva');
-  selCl.innerHTML = '<option value="">— Cliente —</option>';
+  selCl.innerHTML = '<option value="">— Cliente desde reserva —</option>';
   selRe.innerHTML = '<option value="">— Reserva —</option>';
-  Data.clientes.getAll().forEach(c => { const o = document.createElement('option'); o.value=c.id; o.textContent=c.nombre; selCl.appendChild(o); });
-  Data.reservas.getAll().forEach(r => { const o = document.createElement('option'); o.value=r.id; o.textContent=`${r.codigo} · ${Data.clienteNombre(r.clienteId)}`; selRe.appendChild(o); });
+  reservasDisponibles.forEach(r => {
+    if (!selCl.querySelector(`option[value="${r.cliente_id}"]`)) {
+      const oc = document.createElement('option');
+      oc.value = r.cliente_id;
+      oc.textContent = r.cliente?.nombre || 'Cliente sin nombre';
+      selCl.appendChild(oc);
+    }
+    const o = document.createElement('option');
+    o.value = r.id;
+    o.textContent = `${r.codigo || 'Reserva'} · ${r.cliente?.nombre || '—'} · ${r.evento?.nombre || '—'}`;
+    selRe.appendChild(o);
+  });
 }
 
-function nextCodigo() {
-  const ingresos = Data.ingresos.getAll();
-  const max = ingresos.reduce((m,i) => Math.max(m, parseInt((i.codigo||'PAG-000').split('-')[1]||0)), 0);
-  return 'PAG-' + String(max+1).padStart(3,'0');
+function onReservaChange() {
+  const reservaId = parseInt(document.getElementById('fReserva').value);
+  const reserva = reservasDisponibles.find(r => Number(r.id) === reservaId);
+  document.getElementById('fCliente').value = reserva?.cliente_id || '';
+  if (reserva && !document.getElementById('fConcepto').value.trim()) {
+    document.getElementById('fConcepto').value = `Pago reserva ${reserva.codigo || ''}`.trim();
+  }
 }
 
 function renderTabla() {
@@ -146,15 +172,15 @@ function renderTabla() {
   const tbody  = document.getElementById('tablaBody');
 
   const now = new Date(), m = now.getMonth(), y = now.getFullYear();
-  const todos = Data.ingresos.getAll();
+  const todos = todosLosIngresos;
   const filtrados = todos.filter(i => {
-    const search = `${i.codigo||''} ${Data.clienteNombre(i.clienteId)} ${i.concepto||''}`.toLowerCase();
+    const search = `${i.codigo||''} ${i.cliente?.nombre || ''} ${i.reserva?.codigo || ''} ${i.reserva?.evento?.nombre || ''} ${i.concepto||''}`.toLowerCase();
     return search.includes(txt) && (!estado||i.estado===estado) && (!metodo||i.metodo===metodo);
   });
 
-  const cobrado = todos.filter(i=>i.estado==='Pagado').reduce((s,i)=>s+(i.monto||0),0);
-  const pendiente = todos.filter(i=>i.estado==='Pendiente').reduce((s,i)=>s+(i.monto||0),0);
-  const esteMes = todos.filter(i=>{ const d=new Date(i.fecha+'T00:00:00'); return i.estado==='Pagado'&&d.getMonth()===m&&d.getFullYear()===y; }).reduce((s,i)=>s+(i.monto||0),0);
+  const cobrado = todos.filter(i=>i.estado==='Pagado').reduce((s,i)=>s+Number(i.monto||0),0);
+  const pendiente = todos.filter(i=>i.estado==='Pendiente').reduce((s,i)=>s+Number(i.monto||0),0);
+  const esteMes = todos.filter(i=>{ const d=new Date(i.fecha+'T00:00:00'); return i.estado==='Pagado'&&d.getMonth()===m&&d.getFullYear()===y; }).reduce((s,i)=>s+Number(i.monto||0),0);
 
   document.getElementById('kTotal').textContent    = Fmt.currencyShort(cobrado);
   document.getElementById('kEsteMes').textContent  = Fmt.currencyShort(esteMes);
@@ -166,11 +192,14 @@ function renderTabla() {
   if (!filtrados.length) { tbody.innerHTML = emptyState('No se encontraron pagos.'); return; }
 
   filtrados.sort((a,b) => new Date(b.fecha||0)-new Date(a.fecha||0)).forEach(ing => {
+    const clienteNombre = ing.cliente?.nombre || '—';
+    const reservaCodigo = ing.reserva?.codigo || '—';
+    const tieneBoleta = (ing.boletas || []).some(b => b.estado === 'Emitida');
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td><strong class="i-codigo"></strong></td>
       <td class="i-reserva"></td>
-      <td><div class="client-cell">${avatarEl(Data.clienteNombre(ing.clienteId), ing.clienteId)}<span class="i-cliente"></span></div></td>
+      <td><div class="client-cell">${avatarEl(clienteNombre, ing.cliente_id)}<span class="i-cliente"></span></div></td>
       <td class="i-concepto" style="max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></td>
       <td>${Fmt.dateShort(ing.fecha)}</td>
       <td><strong style="color:var(--green)">${Fmt.currency(ing.monto)}</strong></td>
@@ -178,7 +207,7 @@ function renderTabla() {
       <td><span class="badge badge--gray"></span></td>
       <td>
         <div class="actions">
-          <button class="action-btn" title="Ver boleta" onclick="verBoleta(${ing.id})" ${Boletas.porIngreso(ing.id) ? '' : 'style="opacity:.35;pointer-events:none"'}>
+          <button class="action-btn" title="Ver boleta" onclick="verBoleta(${ing.id})" ${tieneBoleta ? '' : 'style="opacity:.35;pointer-events:none"'}>
             <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h5.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm7 0v3a1 1 0 001 1h3l-4-4zM6 9a1 1 0 000 2h8a1 1 0 100-2H6zm0 4a1 1 0 100 2h5a1 1 0 100-2H6z" clip-rule="evenodd"/></svg>
           </button>
           <button class="action-btn" title="Editar" onclick="editarPago(${ing.id})">
@@ -190,8 +219,8 @@ function renderTabla() {
         </div>
       </td>`;
     tr.querySelector('.i-codigo').textContent  = ing.codigo||'—';
-    tr.querySelector('.i-reserva').textContent = Data.reservaCodigo(ing.reservaId);
-    tr.querySelector('.i-cliente').textContent = Data.clienteNombre(ing.clienteId);
+    tr.querySelector('.i-reserva').textContent = reservaCodigo;
+    tr.querySelector('.i-cliente').textContent = clienteNombre;
     tr.querySelector('.i-concepto').textContent= ing.concepto||'—';
     tr.querySelector('.badge--gray').textContent = ing.metodo||'—';
     tbody.appendChild(tr);
@@ -211,12 +240,13 @@ document.getElementById('modalOverlay').addEventListener('click', e => { if (e.t
 
 function limpiarForm() {
   ['fConcepto','fMonto','fFecha'].forEach(id => document.getElementById(id).value='');
+  document.getElementById('fCliente').value = '';
+  document.getElementById('fReserva').value = '';
   document.getElementById('fMetodo').selectedIndex=0;
   document.getElementById('fEstado').selectedIndex=0;
 }
 
-function guardarPago() {
-  const clienteId = parseInt(document.getElementById('fCliente').value)||null;
+async function guardarPago() {
   const reservaId = parseInt(document.getElementById('fReserva').value)||null;
   const concepto  = document.getElementById('fConcepto').value.trim();
   const monto     = parseFloat(document.getElementById('fMonto').value)||0;
@@ -224,54 +254,45 @@ function guardarPago() {
   const metodo    = document.getElementById('fMetodo').value;
   const estado    = document.getElementById('fEstado').value;
 
-  if (!clienteId)  { Toast.error('Selecciona un cliente'); return; }
+  if (!reservaId)  { Toast.error('Selecciona una reserva'); return; }
   if (monto <= 0)  { Toast.error('El monto debe ser mayor a 0'); return; }
   if (!fecha)      { Toast.error('La fecha es obligatoria'); return; }
 
   // Verificar que el pago no exceda el saldo pendiente de la reserva
-  if (reservaId && estado === 'Pagado') {
-    const reserva = Data.reservas.find(reservaId);
+  if (estado === 'Pagado') {
+    const reserva = reservasDisponibles.find(r => Number(r.id) === reservaId);
     if (reserva) {
-      const yaPagado = Data.ingresos.getAll()
-        .filter(i => i.reservaId === reservaId && i.estado === 'Pagado' && i.id !== editandoId)
-        .reduce((s, i) => s + (i.monto || 0), 0);
-      if (yaPagado + monto > reserva.total) {
-        const exceso = Fmt.currency(yaPagado + monto - reserva.total);
+      const yaPagado = todosLosIngresos
+        .filter(i => Number(i.reserva_id) === reservaId && i.estado === 'Pagado' && i.id !== editandoId)
+        .reduce((s, i) => s + Number(i.monto || 0), 0);
+      if (yaPagado + monto > Number(reserva.total || 0)) {
+        const exceso = Fmt.currency(yaPagado + monto - Number(reserva.total || 0));
         Toast.error(`El monto excede el total de la reserva en ${exceso}`);
         return;
       }
     }
   }
 
-  if (editandoId !== null) {
-    const ingAnterior = Data.ingresos.find(editandoId);
-    Data.ingresos.update(editandoId, { clienteId, reservaId, concepto, monto, fecha, metodo, estado });
-    // Sincronizar reserva anterior y nueva si cambió
-    if (ingAnterior?.reservaId) Data.sincronizarSaldoReserva(ingAnterior.reservaId);
-    if (reservaId && reservaId !== ingAnterior?.reservaId) Data.sincronizarSaldoReserva(reservaId);
-    Toast.success('Pago actualizado ✓');
-  } else {
-    const nuevoIngreso = Data.ingresos.create({ codigo: nextCodigo(), clienteId, reservaId, concepto, monto, fecha, metodo, estado });
-    if (reservaId) Data.sincronizarSaldoReserva(reservaId);
-    Toast.success('Pago registrado ✓');
-    cerrarModal();
-    renderTabla();
-    const boleta = Boletas.crear(nuevoIngreso);
-    Boletas.abrirPreview(boleta);
-    return;
-  }
+  const payload = { reserva_id: reservaId, concepto, monto, fecha, metodo, estado };
+  const res = editandoId !== null
+    ? await ingresosService.actualizar(editandoId, payload)
+    : await ingresosService.crear(payload);
+
+  if (res.error) { Toast.error('Error al guardar pago: ' + res.error); return; }
+  Toast.success(editandoId ? 'Pago actualizado ✓' : 'Pago registrado ✓');
   cerrarModal();
-  renderTabla();
+  await cargarDatos();
 }
 
-function editarPago(id) {
-  const ing = Data.ingresos.find(id);
+async function editarPago(id) {
+  const { data: ing, error } = await ingresosService.getById(id);
+  if (error) { Toast.error('Error al cargar pago'); return; }
   if (!ing) return;
   editandoId = id;
   poblarSelects();
   document.getElementById('modalTitulo').textContent = 'Editar Pago';
-  document.getElementById('fCliente').value  = ing.clienteId||'';
-  document.getElementById('fReserva').value  = ing.reservaId||'';
+  document.getElementById('fCliente').value  = ing.cliente_id||'';
+  document.getElementById('fReserva').value  = ing.reserva_id||'';
   document.getElementById('fConcepto').value = ing.concepto||'';
   document.getElementById('fMonto').value    = ing.monto||'';
   document.getElementById('fFecha').value    = ing.fecha||'';
@@ -280,25 +301,31 @@ function editarPago(id) {
   document.getElementById('modalOverlay').classList.add('modal-overlay--open');
 }
 
-function verBoleta(ingresoId) {
-  const boleta = Boletas.porIngreso(ingresoId);
+async function verBoleta(ingresoId) {
+  const { data: boleta, error } = await ingresosService.getBoletaPorIngreso(ingresoId);
+  if (error) { Toast.error('Error al cargar boleta'); return; }
   if (!boleta) { Toast.warning('Este pago no tiene una boleta asociada'); return; }
-  Boletas.abrirPreview(boleta);
+  abrirPreviewBoleta(boleta);
 }
 
 async function pedirEliminar(id) {
+  const hist = await ingresosService.getHistorialBoletas(id);
+  if (hist.error) { Toast.error('Error al verificar boletas asociadas'); return; }
+  if ((hist.data || []).length) {
+    Toast.warning('No se puede eliminar: el pago tiene boletas asociadas. Las boletas son inmutables.');
+    return;
+  }
   const ok = await Confirm({ title:'¿Eliminar pago?', message:'Esta acción no se puede deshacer.', okText:'Sí, eliminar' });
   if (!ok) return;
-  const ing = Data.ingresos.find(id);
-  Data.ingresos.delete(id);
-  if (ing?.reservaId) Data.sincronizarSaldoReserva(ing.reservaId);
-  renderTabla();
+  const res = await ingresosService.eliminar(id);
+  if (res.error) { Toast.error('No se pudo eliminar. Verifica permisos o dependencias.'); return; }
+  await cargarDatos();
   Toast.success('Pago eliminado');
 }
 
 function exportarCSV() {
   const rows = [['Código','Reserva','Cliente','Concepto','Fecha','Monto','Estado','Método']];
-  Data.ingresos.getAll().forEach(i => rows.push([i.codigo||'', Data.reservaCodigo(i.reservaId), Data.clienteNombre(i.clienteId), i.concepto||'', i.fecha, i.monto||0, i.estado, i.metodo||'']));
+  todosLosIngresos.forEach(i => rows.push([i.codigo||'', i.reserva?.codigo || '', i.cliente?.nombre || '', i.concepto||'', i.fecha, i.monto||0, i.estado, i.metodo||'']));
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.aoa_to_sheet(rows);
   XLSX.utils.book_append_sheet(wb, ws, 'Ingresos');
@@ -306,7 +333,164 @@ function exportarCSV() {
   Toast.success('Excel exportado ✓');
 }
 
-renderTabla();
+let boletaOverlay = null;
+
+function serviciosBoleta(boleta) {
+  return (boleta.servicios || []).map(s => ({
+    nombre: s.nombre || '—',
+    cantidad: s.cantidad || 1,
+    precio: s.precio_unitario ?? 0,
+    subtotal: s.subtotal ?? 0,
+    observaciones: s.observaciones || '',
+  }));
+}
+
+function templateBoletaHTML(boleta) {
+  const cliente = boleta.cliente || {};
+  const evento = boleta.evento || {};
+  const reserva = boleta.reserva || {};
+  const servicios = serviciosBoleta(boleta);
+  const fechaHora = boleta.created_at ? new Date(boleta.created_at) : new Date();
+  const filasServicios = servicios.map(s => `
+      <tr>
+        <td>${escHtml(s.nombre)}</td>
+        <td style="text-align:center">${escHtml(String(s.cantidad))}</td>
+        <td style="text-align:right">${Fmt.currency(s.precio)}</td>
+        <td style="text-align:right">${Fmt.currency(s.subtotal)}</td>
+        <td>${escHtml(s.observaciones || '—')}</td>
+      </tr>`).join('');
+
+  return `
+      <div class="boleta-header">
+        <div>
+          <h2>Memory Events</h2>
+          <p class="boleta-numero">Boleta N° ${escHtml(boleta.numero)}</p>
+        </div>
+        <div class="boleta-fecha">
+          <p>${fechaHora.toLocaleDateString('es-PE', { day:'2-digit', month:'long', year:'numeric' })}</p>
+          <p>${fechaHora.toLocaleTimeString('es-PE', { hour:'2-digit', minute:'2-digit' })}</p>
+        </div>
+      </div>
+
+      <div class="boleta-grid">
+        <div class="boleta-box">
+          <h4>Datos del cliente</h4>
+          <p><strong>${escHtml(cliente.nombre || '—')}</strong></p>
+          <p>${escHtml(cliente.email || '—')}</p>
+          <p>${escHtml(cliente.telefono || '—')}</p>
+          <p>${escHtml(cliente.direccion || '—')}</p>
+        </div>
+        <div class="boleta-box">
+          <h4>Datos del evento</h4>
+          <p><strong>${escHtml(evento.nombre || '—')}</strong></p>
+          <p>${escHtml(evento.tipo?.nombre || '—')}</p>
+          <p>${evento.fecha ? Fmt.date(evento.fecha) : '—'}</p>
+          <p>${escHtml(evento.lugar || '—')}</p>
+          ${reserva.id ? `<p>Reserva ${escHtml(reserva.codigo || '')}</p>` : ''}
+        </div>
+      </div>
+
+      <table class="boleta-table">
+        <thead><tr><th>Servicio</th><th>Cant.</th><th>Precio</th><th>Subtotal</th><th>Obs.</th></tr></thead>
+        <tbody>${filasServicios}</tbody>
+      </table>
+
+      <div class="boleta-totales">
+        <div><span>Subtotal</span><span>${Fmt.currency(boleta.subtotal)}</span></div>
+        <div><span>Impuestos</span><span>${Fmt.currency(boleta.impuestos)}</span></div>
+        <div class="boleta-total-final"><span>Total</span><span>${Fmt.currency(boleta.total)}</span></div>
+        <div class="boleta-pagado"><span>Monto pagado</span><span>${Fmt.currency(boleta.monto_pagado)}</span></div>
+        <div><span>Saldo pendiente</span><span style="color:${Number(boleta.saldo_pendiente) > 0 ? 'var(--red)' : 'var(--green)'}">${Fmt.currency(boleta.saldo_pendiente)}</span></div>
+      </div>`;
+}
+
+function ensureBoletaOverlay() {
+  if (boletaOverlay) return boletaOverlay;
+  boletaOverlay = document.createElement('div');
+  boletaOverlay.className = 'modal-overlay';
+  boletaOverlay.id = 'boletaOverlay';
+  boletaOverlay.innerHTML = `
+      <div class="modal modal--lg">
+        <div class="modal-header">
+          <h3>Boleta de pago</h3>
+          <button class="modal-close" id="boletaCerrarBtn">✕</button>
+        </div>
+        <div id="boletaPrintArea"></div>
+        <div class="modal-footer">
+          <button class="btn btn--outline" id="boletaCerrarBtn2">Cerrar</button>
+          <button class="btn btn--outline" id="boletaImprimirBtn">Imprimir</button>
+          <button class="btn btn--primary" id="boletaPdfBtn">Descargar PDF</button>
+        </div>
+      </div>`;
+  document.body.appendChild(boletaOverlay);
+  boletaOverlay.addEventListener('click', e => { if (e.target === boletaOverlay) cerrarPreviewBoleta(); });
+  boletaOverlay.querySelector('#boletaCerrarBtn').addEventListener('click', cerrarPreviewBoleta);
+  boletaOverlay.querySelector('#boletaCerrarBtn2').addEventListener('click', cerrarPreviewBoleta);
+  return boletaOverlay;
+}
+
+function abrirPreviewBoleta(boleta) {
+  const ov = ensureBoletaOverlay();
+  ov.querySelector('#boletaPrintArea').innerHTML = templateBoletaHTML(boleta);
+  ov.querySelector('#boletaImprimirBtn').onclick = () => window.print();
+  ov.querySelector('#boletaPdfBtn').onclick = () => descargarBoletaPDF(boleta);
+  ov.classList.add('modal-overlay--open');
+}
+
+function cerrarPreviewBoleta() {
+  boletaOverlay?.classList.remove('modal-overlay--open');
+}
+
+function descargarBoletaPDF(boleta) {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  const cliente = boleta.cliente || {};
+  const evento = boleta.evento || {};
+  const servicios = serviciosBoleta(boleta);
+  const fechaHora = boleta.created_at ? new Date(boleta.created_at) : new Date();
+
+  doc.setFontSize(16);
+  doc.text('Memory Events', 14, 18);
+  doc.setFontSize(11);
+  doc.text(`Boleta N° ${boleta.numero}`, 14, 26);
+  doc.text(`${Fmt.date(boleta.created_at)}  ${fechaHora.toLocaleTimeString('es-PE', { hour:'2-digit', minute:'2-digit' })}`, 130, 18);
+  doc.setFontSize(10);
+  doc.text(`Cliente: ${cliente.nombre || '—'}`, 14, 36);
+  doc.text(`Email: ${cliente.email || '—'}`, 14, 42);
+  doc.text(`Evento: ${evento.nombre || '—'}`, 14, 50);
+  doc.text(`Tipo: ${evento.tipo?.nombre || '—'}`, 14, 56);
+  doc.autoTable({
+    startY: 64,
+    head: [['Servicio', 'Cant.', 'Precio', 'Subtotal', 'Observaciones']],
+    body: servicios.map(s => [s.nombre, String(s.cantidad), Fmt.currency(s.precio), Fmt.currency(s.subtotal), s.observaciones || '—']),
+    styles: { fontSize: 9 },
+    headStyles: { fillColor: [201, 163, 90] },
+  });
+  const y = doc.lastAutoTable.finalY + 10;
+  doc.setFontSize(11);
+  doc.text(`Subtotal: ${Fmt.currency(boleta.subtotal)}`, 140, y);
+  doc.text(`Impuestos: ${Fmt.currency(boleta.impuestos)}`, 140, y + 6);
+  doc.setFont(undefined, 'bold');
+  doc.text(`Total: ${Fmt.currency(boleta.total)}`, 140, y + 12);
+  doc.setFont(undefined, 'normal');
+  doc.text(`Monto pagado: ${Fmt.currency(boleta.monto_pagado)}`, 140, y + 20);
+  doc.text(`Saldo pendiente: ${Fmt.currency(boleta.saldo_pendiente)}`, 140, y + 26);
+  doc.save(`boleta-${boleta.numero}.pdf`);
+}
+
+async function cargarDatos() {
+  const [resIngresos, resReservas] = await Promise.all([
+    ingresosService.getAll(),
+    reservasService.getAll(),
+  ]);
+  if (resIngresos.error) { Toast.error('Error al cargar ingresos'); return; }
+  if (resReservas.error) { Toast.error('Error al cargar reservas'); return; }
+  todosLosIngresos = resIngresos.data || [];
+  reservasDisponibles = resReservas.data || [];
+  renderTabla();
+}
+
+cargarDatos();
 </script>
 </body>
 </html>

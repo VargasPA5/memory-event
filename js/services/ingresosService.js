@@ -4,12 +4,14 @@
    Notas de negocio importantes:
    - El campo `codigo` (PAG-XXX) lo genera automáticamente el trigger
      `fn_generar_codigo_ingreso` — nunca enviarlo en el INSERT.
-   - Al insertar un ingreso con estado='Pagado', el trigger
-     `fn_sync_saldo_reserva` actualiza automáticamente el saldo de la reserva.
+   - Todo ingreso pertenece a una reserva. El frontend solo envía `reserva_id`
+     y datos propios del pago; nunca `cliente_id` ni `planificador_id`.
+   - Al insertar/actualizar un ingreso, el trigger `fn_sync_saldo_reserva`
+     actualiza automáticamente el saldo de la reserva.
    - El trigger `fn_generar_boleta` crea automáticamente una boleta
      en la tabla `boletas` al registrar un ingreso — sin acción adicional.
-   - `planificador_id` se hereda desde la reserva via trigger cuando
-     `reserva_id` está presente (`fn_ingreso_planificador_desde_reserva`).     */
+   - `cliente_id` y `planificador_id` se heredan desde la reserva por trigger
+     (`fn_ingreso_planificador_desde_reserva`).                              */
 
 import { supabase } from '../supabaseClient.js';
 
@@ -18,16 +20,11 @@ const _err = (error, ctx) => {
   return error?.message || 'Error inesperado';
 };
 
-const _uid = async () => {
-  const { data: { user } } = await supabase.auth.getUser();
-  return user?.id ?? null;
-};
-
 /* ── Ingresos ────────────────────────────────────────────────────────────── */
 
 /**
  * Devuelve todos los ingresos accesibles para el usuario actual.
- * Incluye datos del cliente y la reserva asociada.
+ * Incluye datos de reserva, cliente, evento, planificador y boleta activa.
  */
 export const getAll = async () => {
   const { data, error } = await supabase
@@ -46,8 +43,16 @@ export const getAll = async () => {
       reserva_id,
       cliente_id,
       cliente:clientes (id, nombre, tipo, email),
-      reserva:reservas (id, codigo, evento_id, evento:eventos (nombre)),
-      planificador:perfiles!ingresos_planificador_id_fkey (id, nombre)
+      reserva:reservas (
+        id,
+        codigo,
+        total,
+        saldo,
+        evento_id,
+        evento:eventos (id, nombre, fecha, lugar)
+      ),
+      planificador:perfiles!ingresos_planificador_id_fkey (id, nombre),
+      boletas (id, numero, estado, created_at)
     `)
     .order('created_at', { ascending: false });
 
@@ -65,8 +70,21 @@ export const getById = async (id) => {
     .select(`
       *,
       cliente:clientes (id, nombre, tipo, email, telefono),
-      reserva:reservas (id, codigo, total, saldo, evento:eventos (id, nombre)),
-      planificador:perfiles!ingresos_planificador_id_fkey (id, nombre)
+      reserva:reservas (id, codigo, total, saldo, evento:eventos (id, nombre, fecha, lugar)),
+      planificador:perfiles!ingresos_planificador_id_fkey (id, nombre),
+      boletas (
+        id,
+        numero,
+        estado,
+        fecha,
+        subtotal,
+        impuestos,
+        total,
+        monto_pagado,
+        saldo_pendiente,
+        motivo_anulacion,
+        created_at
+      )
     `)
     .eq('id', id)
     .single();
@@ -115,29 +133,26 @@ export const getByReserva = async (reservaId) => {
  * - El trigger fn_sync_saldo_reserva actualiza el saldo de la reserva.
  *
  * @param {{
- *   cliente_id: number,
+ *   reserva_id: number,
  *   monto: number|string,
  *   fecha: string,
  *   metodo?: string,
- *   reserva_id?: number,
  *   concepto?: string,
  *   estado?: string
  * }} campos
  */
 export const crear = async (campos) => {
-  const uid = await _uid();
-  if (!uid) return { data: null, error: 'No hay sesión activa' };
+  if (!campos.reserva_id) return { data: null, error: 'Selecciona una reserva' };
 
   const payload = {
-    planificador_id: uid,       // puede ser sobreescrito por trigger si hay reserva_id
-    cliente_id:      campos.cliente_id,
     monto:           Number(campos.monto),
     fecha:           campos.fecha,
     metodo:          campos.metodo     || 'Efectivo',
     estado:          campos.estado     || 'Pendiente',
-    reserva_id:      campos.reserva_id || null,
+    reserva_id:      campos.reserva_id,
     concepto:        campos.concepto   || null,
     // codigo: generado por trigger fn_generar_codigo_ingreso
+    // cliente_id / planificador_id: derivados por trigger desde reservas
   };
 
   const { data, error } = await supabase
@@ -157,7 +172,10 @@ export const crear = async (campos) => {
  * @param {object} cambios
  */
 export const actualizar = async (id, cambios) => {
-  const { planificador_id, cliente_id, codigo, created_by, created_at, ...campos } = cambios;
+  const { planificador_id, cliente_id, codigo, created_by, created_at, updated_by, updated_at, ...campos } = cambios;
+  if ('reserva_id' in campos && !campos.reserva_id) {
+    return { data: null, error: 'Todo ingreso debe estar asociado a una reserva' };
+  }
 
   const { data, error } = await supabase
     .from('ingresos')
@@ -182,6 +200,45 @@ export const eliminar = async (id) => {
 
   if (error) return { data: null, error: _err(error, `eliminar(${id})`) };
   return { data: true, error: null };
+};
+
+/**
+ * Devuelve la boleta activa asociada a un ingreso, con sus servicios.
+ * @param {number} ingresoId
+ */
+export const getBoletaPorIngreso = async (ingresoId) => {
+  const { data, error } = await supabase
+    .from('boletas')
+    .select(`
+      *,
+      cliente:clientes (id, nombre, email, telefono, direccion),
+      evento:eventos (id, nombre, tipo:tipos_evento (nombre), fecha, lugar),
+      reserva:reservas (id, codigo),
+      servicios:boleta_servicios (*)
+    `)
+    .eq('ingreso_id', ingresoId)
+    .eq('estado', 'Emitida')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) return { data: null, error: _err(error, `getBoletaPorIngreso(${ingresoId})`) };
+  return { data, error: null };
+};
+
+/**
+ * Devuelve todo el historial de boletas de un ingreso.
+ * @param {number} ingresoId
+ */
+export const getHistorialBoletas = async (ingresoId) => {
+  const { data, error } = await supabase
+    .from('boletas')
+    .select('id, numero, estado, fecha, total, monto_pagado, saldo_pendiente, motivo_anulacion, created_at, anulado_en')
+    .eq('ingreso_id', ingresoId)
+    .order('created_at', { ascending: false });
+
+  if (error) return { data: null, error: _err(error, `getHistorialBoletas(${ingresoId})`) };
+  return { data, error: null };
 };
 
 /**
