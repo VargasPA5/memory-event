@@ -83,7 +83,7 @@
         <!-- Reservas por estado -->
         <div class="report-card">
           <div class="report-card-header-row">
-            <div><h3>Reservas por Estado</h3><p>Confirmadas, pendientes y canceladas</p></div>
+            <div><h3>Eventos por Estado</h3><p>Confirmados, pendientes y cancelados</p></div>
           </div>
           <div class="report-chart-area" style="height:200px"><canvas id="chartReservas"></canvas></div>
         </div>
@@ -103,17 +103,17 @@
         <!-- Tabla: Eventos por mes -->
         <div class="report-card">
           <div class="report-card-header-row">
-            <div><h3>Eventos por Mes</h3><p>Cantidad de eventos programados</p></div>
+            <div><h3>Gastos por Categoría</h3><p>Distribución de gastos pagados</p></div>
           </div>
-          <table class="report-table" id="tblEventosMes"></table>
+          <table class="report-table" id="tblGastosCategoria"></table>
         </div>
 
         <!-- Tabla: Proveedores activos -->
         <div class="report-card">
           <div class="report-card-header-row">
-            <div><h3>Proveedores por Tipo</h3><p>Distribución de servicios disponibles</p></div>
+            <div><h3>Boletas por Estado</h3><p>Documentos emitidos y anulados</p></div>
           </div>
-          <table class="report-table" id="tblProveedores"></table>
+          <table class="report-table" id="tblBoletas"></table>
         </div>
 
       </div>
@@ -142,7 +142,6 @@
         </select>
         <select class="filter-select" id="filtroCategoria" onchange="actualizarReporteCategoria()">
           <option value="">Todas las categorías</option>
-          <option>Boda</option><option>Cumpleaños</option><option>Corporativo</option><option>Graduación</option><option>Quinceañero</option><option>Otros</option>
         </select>
       </div>
 
@@ -172,443 +171,321 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script src="js/storage.js"></script>
 <script src="js/auth.js"></script>
-<script src="js/data.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/app.js"></script>
-<script>
+<script type="module">
+import * as reportesService from './js/services/reportesService.js';
+
 const CHART_COLORS = ['#c9a35a','#10b981','#f59e0b','#3b82f6','#ec4899','#8b5cf6','#14b8a6','#f97316'];
-/* ── Colores de gráficos según tema (ver js/theme.js) ──────────────────── */
+const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+const MESES_CORTOS = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+
+let charts = {};
+let chartsCategoria = {};
+let tiposEvento = [];
+let reporte = null;
+let reporteCategoria = null;
+
 const chartTheme = () => {
   const dark = Theme.get() === 'dark';
   return {
-    grid:   dark ? '#252219' : '#ede9e2',
-    tick:   dark ? '#6a6560' : '#9a9890',
+    grid: dark ? '#252219' : '#ede9e2',
+    tick: dark ? '#6a6560' : '#9a9890',
     legend: dark ? '#eee8de' : '#3a3730',
     ringBg: dark ? '#1c1b18' : '#fff',
     tooltip: { backgroundColor: dark ? '#100f0d' : '#1a1814', titleColor: '#eee8de', bodyColor: dark ? '#8a8478' : '#9a9890', padding: 10 },
   };
 };
-let charts = {};
 
-function destroyChart(id) { if (charts[id]) { charts[id].destroy(); delete charts[id]; } }
+const destroyChart = (id) => { if (charts[id]) { charts[id].destroy(); delete charts[id]; } };
+const destroyChartCategoria = (id) => { if (chartsCategoria[id]) { chartsCategoria[id].destroy(); delete chartsCategoria[id]; } };
+const num = (v) => Number(v || 0);
+const findKpi = (clave) => reporte?.finanzas?.find(k => k.clave === clave) || { valor: 0, detalle: '' };
 
-/* ── KPIs ──────────────────────────────────────────────────────────── */
+function filtrosActuales() {
+  const mes = document.getElementById('filtroMes').value;
+  const anio = document.getElementById('filtroAnio').value;
+  const tipoEventoId = document.getElementById('filtroCategoria').value || null;
+  const now = new Date();
+  const year = anio ? Number(anio) : now.getFullYear();
+  const desde = mes === '' ? `${year}-01-01` : `${year}-${String(Number(mes) + 1).padStart(2, '0')}-01`;
+  const hastaDate = mes === '' ? new Date(year, 11, 31) : new Date(year, Number(mes) + 1, 0);
+  const hasta = `${hastaDate.getFullYear()}-${String(hastaDate.getMonth() + 1).padStart(2, '0')}-${String(hastaDate.getDate()).padStart(2, '0')}`;
+  return { desde, hasta, tipoEventoId, limite: 10 };
+}
+
+function renderLoading() {
+  document.getElementById('statRow').innerHTML = '<div class="kpi-card" style="grid-column:1/-1"><div class="kpi-bottom"><div class="kpi-label">Cargando reportes...</div></div></div>';
+}
+
 function renderStats() {
-  const s = Data.stats();
   const items = [
-    { label:'Clientes', value: s.clientes.total, sub:`${s.clientes.personas} personas · ${s.clientes.empresas} emp.`, color:'blue' },
-    { label:'Eventos',  value: s.eventos.total,  sub:`${s.eventos.confirmados} confirmados`, color:'green' },
-    { label:'Ingresos cobrados', value: Fmt.currency(s.ingresos.total), sub:`Este mes: ${Fmt.currency(s.ingresos.esteMes)}`, color:'indigo' },
-    { label:'Por cobrar', value: Fmt.currency(s.ingresos.pendientes), sub:`${s.reservas.pendientes} reservas pendientes`, color:'yellow' },
+    { label:'Clientes', value: findKpi('clientes').valor, sub:findKpi('clientes').detalle, color:'blue', formato:'numero' },
+    { label:'Eventos', value: findKpi('eventos').valor, sub:findKpi('eventos').detalle, color:'green', formato:'numero' },
+    { label:'Ingresos cobrados', value: findKpi('ingresos_cobrados').valor, sub:findKpi('ingresos_cobrados').detalle, color:'indigo', formato:'moneda' },
+    { label:'Por cobrar', value: findKpi('por_cobrar').valor, sub:findKpi('por_cobrar').detalle, color:'yellow', formato:'moneda' },
   ];
   const row = document.getElementById('statRow');
   row.innerHTML = '';
   items.forEach(it => {
     const div = document.createElement('div');
     div.className = 'kpi-card';
-    div.innerHTML = `
-      <div class="kpi-top"><div class="kpi-icon kpi-icon--${it.color}"></div></div>
-      <div class="kpi-bottom">
-        <div class="kpi-value kpi-v"></div>
-        <div class="kpi-label">${escHtml(it.label)}</div>
-        <div class="kpi-trend neutral kpi-s"></div>
-      </div>`;
-    div.querySelector('.kpi-v').textContent = it.value;
-    div.querySelector('.kpi-s').textContent = it.sub;
+    div.innerHTML = `<div class="kpi-top"><div class="kpi-icon kpi-icon--${it.color}"></div></div><div class="kpi-bottom"><div class="kpi-value kpi-v"></div><div class="kpi-label">${escHtml(it.label)}</div><div class="kpi-trend neutral kpi-s"></div></div>`;
+    div.querySelector('.kpi-v').textContent = it.formato === 'moneda' ? Fmt.currency(num(it.value)) : num(it.value).toLocaleString('es-PE');
+    div.querySelector('.kpi-s').textContent = it.sub || '';
     row.appendChild(div);
   });
 }
 
-/* ── Gráfico ingresos mensuales ─────────────────────────────────────── */
 function renderChartIngresos() {
   destroyChart('ingresos');
   const ct = chartTheme();
-  const porMes = Data.stats().ingresos.porMes;
+  const ingresos = num(findKpi('ingresos_cobrados').valor);
+  const gastos = num(findKpi('gastos_pagados').valor);
+  const utilidad = num(findKpi('utilidad').valor);
   charts.ingresos = new Chart(document.getElementById('chartIngresos'), {
     type: 'bar',
-    data: {
-      labels: porMes.map(m => m.label),
-      datasets: [
-        { label:'Ingresos', data: porMes.map(m => m.total), backgroundColor: 'rgba(201,163,90,.18)', borderColor:'#c9a35a', borderWidth:2, borderRadius:6, hoverBackgroundColor:'rgba(201,163,90,.28)' }
-      ]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: { legend:{ display:false }, tooltip:{ ...ct.tooltip, callbacks:{ label: ctx=>' '+Fmt.currency(ctx.parsed.y) } } },
-      scales: {
-        x: { grid:{ display:false }, ticks:{ color:ct.tick, font:{size:11} } },
-        y: { grid:{ color:ct.grid }, ticks:{ color:ct.tick, font:{size:11}, callback: v => Fmt.currencyShort(v) } }
-      }
-    }
+    data: { labels: ['Ingresos', 'Gastos', 'Utilidad'], datasets: [{ label:'Periodo', data:[ingresos, gastos, utilidad], backgroundColor:['rgba(201,163,90,.18)','rgba(239,68,68,.16)','rgba(16,185,129,.16)'], borderColor:['#c9a35a','#ef4444','#10b981'], borderWidth:2, borderRadius:6 }] },
+    options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false }, tooltip:{ ...ct.tooltip, callbacks:{ label: ctx=>' '+Fmt.currency(ctx.parsed.y) } } }, scales:{ x:{ grid:{ display:false }, ticks:{ color:ct.tick, font:{size:11} } }, y:{ grid:{ color:ct.grid }, ticks:{ color:ct.tick, font:{size:11}, callback:v=>Fmt.currencyShort(v) } } } }
   });
 }
 
-/* ── Gráfico eventos por tipo ───────────────────────────────────────── */
 function renderChartEventosTipo() {
   destroyChart('eventosTipo');
   const ct = chartTheme();
-  const tipos = Data.stats().eventos.tipos;
-  const labels = Object.keys(tipos);
-  const values = Object.values(tipos);
-  if (!labels.length) return;
+  const rows = reporte?.eventosTipo || [];
   charts.eventosTipo = new Chart(document.getElementById('chartEventosTipo'), {
     type: 'doughnut',
-    data: { labels, datasets:[{ data:values, backgroundColor:CHART_COLORS, borderColor:ct.ringBg, borderWidth:3, hoverOffset:5 }] },
-    options: {
-      responsive:true, maintainAspectRatio:false, cutout:'60%',
-      plugins: { legend:{ position:'right', labels:{ font:{size:11}, color:ct.legend, boxWidth:12 } }, tooltip:{ ...ct.tooltip } }
-    }
+    data: { labels: rows.map(r=>r.tipo), datasets:[{ data: rows.map(r=>num(r.eventos)), backgroundColor: rows.map((r,i)=>r.color || CHART_COLORS[i % CHART_COLORS.length]), borderColor:ct.ringBg, borderWidth:3, hoverOffset:5 }] },
+    options: { responsive:true, maintainAspectRatio:false, cutout:'60%', plugins:{ legend:{ position:'right', labels:{ font:{size:11}, color:ct.legend, boxWidth:12 } }, tooltip:{ ...ct.tooltip } } }
   });
 }
 
-/* ── Gráfico reservas por estado ────────────────────────────────────── */
-function renderChartReservas() {
+function renderChartEventosEstado() {
   destroyChart('reservas');
   const ct = chartTheme();
-  const re = Data.stats().reservas;
+  const rows = reporte?.eventosEstado || [];
   charts.reservas = new Chart(document.getElementById('chartReservas'), {
     type: 'doughnut',
-    data: {
-      labels: ['Confirmadas','Pendientes','Canceladas'],
-      datasets:[{ data:[re.confirmadas, re.pendientes, re.canceladas], backgroundColor:['#c9a35a','#f59e0b','#ef4444'], borderColor:ct.ringBg, borderWidth:3, hoverOffset:5 }]
-    },
-    options: {
-      responsive:true, maintainAspectRatio:false, cutout:'60%',
-      plugins: { legend:{ position:'right', labels:{ font:{size:11}, color:ct.legend, boxWidth:12 } }, tooltip:{ ...ct.tooltip } }
-    }
+    data: { labels: rows.map(r=>r.estado), datasets:[{ data: rows.map(r=>num(r.total)), backgroundColor:CHART_COLORS, borderColor:ct.ringBg, borderWidth:3, hoverOffset:5 }] },
+    options: { responsive:true, maintainAspectRatio:false, cutout:'60%', plugins:{ legend:{ position:'right', labels:{ font:{size:11}, color:ct.legend, boxWidth:12 } }, tooltip:{ ...ct.tooltip } } }
   });
 }
 
-/* ── Tabla top clientes ─────────────────────────────────────────────── */
 function renderTblClientes() {
   const tbl = document.getElementById('tblClientes');
-  const ingresos = Data.ingresos.getAll().filter(i=>i.estado==='Pagado');
-  const clMap = {};
-  ingresos.forEach(i => { clMap[i.clienteId] = (clMap[i.clienteId]||0) + (i.monto||0); });
-  const sorted = Object.entries(clMap).sort((a,b)=>b[1]-a[1]).slice(0,6);
-  const maxVal = sorted[0]?.[1] || 1;
-
+  const rows = reporte?.topClientes || [];
+  const maxVal = Math.max(...rows.map(r=>num(r.ingresos)), 1);
   tbl.innerHTML = `<thead><tr><th>Cliente</th><th>Ingresos</th><th style="width:100px">%</th></tr></thead>`;
   const tbody = document.createElement('tbody');
-  sorted.forEach(([id,total]) => {
-    const pct = Math.round(total/maxVal*100);
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td class="cl-nom" style="font-weight:600"></td>
-      <td style="color:var(--green);font-weight:700"></td>
-      <td><div class="prog-bar"><div class="prog-fill" style="width:${pct}%"></div></div></td>`;
-    tr.querySelector('.cl-nom').textContent = Data.clienteNombre(parseInt(id));
-    tr.querySelectorAll('td')[1].textContent = Fmt.currency(total);
-    tbody.appendChild(tr);
-  });
-  if (!sorted.length) tbody.innerHTML = `<tr><td colspan="3" style="padding:24px;text-align:center;color:var(--txt-muted)">Sin datos</td></tr>`;
-  tbl.appendChild(tbody);
-}
-
-/* ── Tabla eventos por mes ─────────────────────────────────────────── */
-function renderTblEventosMes() {
-  const tbl = document.getElementById('tblEventosMes');
-  const MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
-  const now = new Date();
-  const evMap = {};
-  Data.eventos.getAll().forEach(e => {
-    if (!e.fecha) return;
-    const d = new Date(e.fecha+'T00:00:00');
-    const key = `${d.getFullYear()}-${d.getMonth()}`;
-    evMap[key] = (evMap[key]||0)+1;
-  });
-  const rows = Array.from({length:6}).map((_,i) => {
-    const d = new Date(now.getFullYear(), now.getMonth()-5+i, 1);
-    const key = `${d.getFullYear()}-${d.getMonth()}`;
-    return { label:`${MESES[d.getMonth()]} ${d.getFullYear()}`, count: evMap[key]||0 };
-  }).reverse();
-
-  tbl.innerHTML = `<thead><tr><th>Mes</th><th>Eventos</th><th style="width:80px">Barra</th></tr></thead>`;
-  const tbody = document.createElement('tbody');
-  const maxC = Math.max(...rows.map(r=>r.count),1);
   rows.forEach(r => {
-    const pct = Math.round(r.count/maxC*100);
+    const pct = Math.round(num(r.ingresos) / maxVal * 100);
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td style="font-weight:600">${escHtml(r.label)}</td><td>${r.count}</td><td><div class="prog-bar"><div class="prog-fill" style="width:${pct}%;background:var(--green)"></div></div></td>`;
+    tr.innerHTML = `<td style="font-weight:600">${escHtml(r.cliente)}</td><td style="color:var(--green);font-weight:700">${Fmt.currency(num(r.ingresos))}</td><td><div class="prog-bar"><div class="prog-fill" style="width:${pct}%"></div></div></td>`;
     tbody.appendChild(tr);
   });
+  if (!rows.length) tbody.innerHTML = `<tr><td colspan="3" style="padding:24px;text-align:center;color:var(--txt-muted)">Sin datos</td></tr>`;
   tbl.appendChild(tbody);
 }
 
-/* ── Tabla proveedores por tipo ─────────────────────────────────────── */
-function renderTblProveedores() {
-  const tbl = document.getElementById('tblProveedores');
-  const provMap = {};
-  Data.proveedores.getAll().forEach(p => { provMap[p.tipo] = (provMap[p.tipo]||0)+1; });
-  const sorted = Object.entries(provMap).sort((a,b)=>b[1]-a[1]);
-  const total = Data.proveedores.getAll().length || 1;
-
-  tbl.innerHTML = `<thead><tr><th>Tipo</th><th>Cantidad</th><th>% del total</th></tr></thead>`;
+function renderTblGastosCategoria() {
+  const tbl = document.getElementById('tblGastosCategoria');
+  const rows = reporte?.gastosCategoria || [];
+  tbl.innerHTML = `<thead><tr><th>Categoría</th><th>Gastos</th><th>Total</th></tr></thead>`;
   const tbody = document.createElement('tbody');
-  sorted.forEach(([tipo,n]) => {
-    const pct = Math.round(n/total*100);
+  rows.forEach(r => {
     const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td style="font-weight:600">${badge(tipo)}</td>
-      <td>${n}</td>
-      <td><div style="display:flex;align-items:center;gap:8px"><div class="prog-bar" style="flex:1"><div class="prog-fill" style="width:${pct}%;background:var(--purple)"></div></div><span style="font-size:12px;color:var(--txt-muted)">${pct}%</span></div></td>`;
+    tr.innerHTML = `<td>${badge(r.categoria)}</td><td>${num(r.cantidad)}</td><td>${Fmt.currency(num(r.total))}</td>`;
     tbody.appendChild(tr);
   });
-  if (!sorted.length) tbody.innerHTML = `<tr><td colspan="3" style="padding:24px;text-align:center;color:var(--txt-muted)">Sin datos</td></tr>`;
+  if (!rows.length) tbody.innerHTML = `<tr><td colspan="3" style="padding:24px;text-align:center;color:var(--txt-muted)">Sin gastos pagados</td></tr>`;
   tbl.appendChild(tbody);
 }
 
-/* ── Exports ────────────────────────────────────────────────────────── */
-function exportarIngresos() {
-  const s = Data.stats();
-  const rows = [['Mes','Ingresos (S/)'], ...s.ingresos.porMes.map(m=>[m.label,m.total])];
-  descargarCSV(rows, 'reporte_ingresos_mensuales.csv');
-  Toast.success('Excel exportado ✓');
+function renderTblBoletas() {
+  const tbl = document.getElementById('tblBoletas');
+  const rows = reporte?.boletasPeriodo || [];
+  tbl.innerHTML = `<thead><tr><th>Estado</th><th>Cantidad</th><th>Total</th></tr></thead>`;
+  const tbody = document.createElement('tbody');
+  rows.forEach(r => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${badge(r.estado)}</td><td>${num(r.cantidad)}</td><td>${Fmt.currency(num(r.total))}</td>`;
+    tbody.appendChild(tr);
+  });
+  if (!rows.length) tbody.innerHTML = `<tr><td colspan="3" style="padding:24px;text-align:center;color:var(--txt-muted)">Sin boletas en el periodo</td></tr>`;
+  tbl.appendChild(tbody);
 }
 
-function exportarClientes() {
-  const ingresos = Data.ingresos.getAll().filter(i=>i.estado==='Pagado');
-  const clMap = {};
-  ingresos.forEach(i=>{ clMap[i.clienteId]=(clMap[i.clienteId]||0)+(i.monto||0); });
-  const sorted = Object.entries(clMap).sort((a,b)=>b[1]-a[1]);
-  const rows = [['Cliente','Total Ingresos (S/)'], ...sorted.map(([id,t])=>[Data.clienteNombre(parseInt(id)),t])];
-  descargarCSV(rows, 'reporte_top_clientes.csv');
-  Toast.success('Excel exportado ✓');
-}
-
-function exportarResumen() {
-  const s = Data.stats();
-  const rows = [
-    ['Métrica','Valor'],
-    ['Total Clientes', s.clientes.total],
-    ['Personas', s.clientes.personas],
-    ['Empresas', s.clientes.empresas],
-    ['Total Eventos', s.eventos.total],
-    ['Eventos Confirmados', s.eventos.confirmados],
-    ['Eventos Pendientes', s.eventos.pendientes],
-    ['Total Reservas', s.reservas.total],
-    ['Ingresos Cobrados (S/)', s.ingresos.total],
-    ['Por Cobrar (S/)', s.ingresos.pendientes],
-    ['Proveedores Activos', s.proveedores.activos],
-  ];
-  descargarCSV(rows, 'reporte_resumen_general.csv');
-  Toast.success('Resumen exportado ✓');
-}
-
-function descargarCSV(rows, nombre) {
+function descargarExcel(rows, nombre) {
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.aoa_to_sheet(rows);
   XLSX.utils.book_append_sheet(wb, ws, 'Datos');
   XLSX.writeFile(wb, nombre.replace(/\.csv$/, '.xlsx'));
 }
 
-function actualizarTodo() {
-  renderStats();
-  renderChartIngresos();
-  renderChartEventosTipo();
-  renderChartReservas();
-  renderTblClientes();
-  renderTblEventosMes();
-  renderTblProveedores();
-  actualizarReporteCategoria();
-  Toast.info('Datos actualizados');
+function exportarIngresos() {
+  const rows = [['Métrica','Valor'], ['Ingresos cobrados', num(findKpi('ingresos_cobrados').valor)], ['Gastos pagados', num(findKpi('gastos_pagados').valor)], ['Utilidad estimada', num(findKpi('utilidad').valor)]];
+  descargarExcel(rows, 'reporte_finanzas_periodo.xlsx');
+  Toast.success('Excel exportado ✓');
 }
 
-/* ── Reporte por categoría y periodo ──────────────────────────────────── */
-let chartsCategoria = {};
-function destroyChartCategoria(id) { if (chartsCategoria[id]) { chartsCategoria[id].destroy(); delete chartsCategoria[id]; } }
-
-function poblarFiltrosCategoria() {
-  const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-  const selMes = document.getElementById('filtroMes');
-  meses.forEach((m,i) => { const o = document.createElement('option'); o.value = i; o.textContent = m; selMes.appendChild(o); });
-
-  const anios = new Set();
-  Data.eventos.getAll().forEach(e => { if (e.fecha) anios.add(new Date(e.fecha+'T00:00:00').getFullYear()); });
-  Data.ingresos.getAll().forEach(i => { if (i.fecha) anios.add(new Date(i.fecha+'T00:00:00').getFullYear()); });
-  const selAnio = document.getElementById('filtroAnio');
-  Array.from(anios).sort((a,b)=>b-a).forEach(y => { const o = document.createElement('option'); o.value = y; o.textContent = y; selAnio.appendChild(o); });
+function exportarClientes() {
+  const rows = [['Cliente','Eventos','Ingresos (S/)','Boletas'], ...(reporte?.topClientes || []).map(r => [r.cliente, num(r.eventos), num(r.ingresos), num(r.boletas)])];
+  descargarExcel(rows, 'reporte_top_clientes.xlsx');
+  Toast.success('Excel exportado ✓');
 }
 
-function calcularReporteCategoria() {
-  const mes = document.getElementById('filtroMes').value;
-  const anio = document.getElementById('filtroAnio').value;
-  const categoria = document.getElementById('filtroCategoria').value;
-
-  const enPeriodo = (fechaStr) => {
-    if (mes === '' && anio === '') return true;
-    if (!fechaStr) return false;
-    const d = new Date(fechaStr + (String(fechaStr).includes('T') ? '' : 'T00:00:00'));
-    if (mes !== '' && d.getMonth() !== parseInt(mes)) return false;
-    if (anio !== '' && d.getFullYear() !== parseInt(anio)) return false;
-    return true;
-  };
-
-  const eventos = Data.eventos.getAll().filter(e =>
-    (categoria === '' || e.tipo === categoria) && enPeriodo(e.fecha)
-  );
-  const eventoIds = new Set(eventos.map(e => e.id));
-  const reservas = Data.reservas.getAll().filter(r => eventoIds.has(r.eventoId));
-
-  const ingresos = Data.ingresos.getAll().filter(i => {
-    if (i.estado !== 'Pagado' || !enPeriodo(i.fecha)) return false;
-    if (categoria === '') return true;
-    const reserva = i.reservaId ? Data.reservas.find(i.reservaId) : null;
-    const evento  = reserva?.eventoId ? Data.eventos.find(reserva.eventoId) : null;
-    return evento?.tipo === categoria;
-  });
-  const totalIngresos = ingresos.reduce((s,i) => s + (i.monto||0), 0);
-
-  const categorias = {};
-  eventos.forEach(e => {
-    categorias[e.tipo] = categorias[e.tipo] || { eventos: 0, ingresos: 0 };
-    categorias[e.tipo].eventos++;
-  });
-  ingresos.forEach(i => {
-    const reserva = i.reservaId ? Data.reservas.find(i.reservaId) : null;
-    const evento  = reserva?.eventoId ? Data.eventos.find(reserva.eventoId) : null;
-    const tipo = evento?.tipo || 'Sin categoría';
-    categorias[tipo] = categorias[tipo] || { eventos: 0, ingresos: 0 };
-    categorias[tipo].ingresos += (i.monto||0);
-  });
-
-  return { eventos, reservas, ingresos, totalIngresos, categorias };
+function exportarResumen() {
+  const rows = [['Métrica','Valor','Detalle'], ...(reporte?.finanzas || []).map(r => [r.titulo, r.formato === 'moneda' ? num(r.valor) : num(r.valor), r.detalle])];
+  descargarExcel(rows, 'reporte_resumen_general.xlsx');
+  Toast.success('Resumen exportado ✓');
 }
 
-function renderStatRowCategoria(r) {
+function renderStatRowCategoria() {
   const row = document.getElementById('statRowCategoria');
+  const totalEventos = (reporteCategoria?.eventosTipo || []).reduce((s,r)=>s+num(r.eventos),0);
+  const totalIngresos = (reporteCategoria?.eventosTipo || []).reduce((s,r)=>s+num(r.ingresos),0);
+  const totalGastos = (reporteCategoria?.gastosCategoria || []).reduce((s,r)=>s+num(r.total),0);
+  const totalBoletas = (reporteCategoria?.boletasPeriodo || []).reduce((s,r)=>s+num(r.cantidad),0);
   const items = [
-    { label:'Eventos (periodo)', value: r.eventos.length, color:'green' },
-    { label:'Reservas (periodo)', value: r.reservas.length, color:'blue' },
-    { label:'Ingresos del periodo', value: Fmt.currency(r.totalIngresos), color:'indigo' },
-    { label:'Categorías con actividad', value: Object.keys(r.categorias).length, color:'yellow' },
+    { label:'Eventos (periodo)', value: totalEventos, color:'green', formato:'numero' },
+    { label:'Ingresos del periodo', value: totalIngresos, color:'indigo', formato:'moneda' },
+    { label:'Gastos del periodo', value: totalGastos, color:'blue', formato:'moneda' },
+    { label:'Boletas del periodo', value: totalBoletas, color:'yellow', formato:'numero' },
   ];
   row.innerHTML = '';
   items.forEach(it => {
     const div = document.createElement('div');
     div.className = 'kpi-card';
-    div.innerHTML = `
-      <div class="kpi-top"><div class="kpi-icon kpi-icon--${it.color}"></div></div>
-      <div class="kpi-bottom"><div class="kpi-value kpi-v"></div><div class="kpi-label">${escHtml(it.label)}</div></div>`;
-    div.querySelector('.kpi-v').textContent = it.value;
+    div.innerHTML = `<div class="kpi-top"><div class="kpi-icon kpi-icon--${it.color}"></div></div><div class="kpi-bottom"><div class="kpi-value kpi-v"></div><div class="kpi-label">${escHtml(it.label)}</div></div>`;
+    div.querySelector('.kpi-v').textContent = it.formato === 'moneda' ? Fmt.currency(it.value) : it.value.toLocaleString('es-PE');
     row.appendChild(div);
   });
 }
 
-function renderChartIngresosCategoria(r) {
+function renderChartIngresosCategoria() {
   destroyChartCategoria('ingCat');
   const ct = chartTheme();
-  const labels = Object.keys(r.categorias);
-  const values = labels.map(l => r.categorias[l].ingresos);
+  const rows = reporteCategoria?.eventosTipo || [];
   chartsCategoria.ingCat = new Chart(document.getElementById('chartIngresosCategoria'), {
     type: 'bar',
-    data: { labels, datasets: [{ label:'Ingresos', data:values, backgroundColor:'rgba(201,163,90,.18)', borderColor:'#c9a35a', borderWidth:2, borderRadius:6, hoverBackgroundColor:'rgba(201,163,90,.28)' }] },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: { legend:{ display:false }, tooltip:{ ...ct.tooltip, callbacks:{ label: ctx=>' '+Fmt.currency(ctx.parsed.y) } } },
-      scales: {
-        x: { grid:{ display:false }, ticks:{ color:ct.tick, font:{size:11} } },
-        y: { grid:{ color:ct.grid }, ticks:{ color:ct.tick, font:{size:11}, callback: v => Fmt.currencyShort(v) } }
-      }
-    }
+    data: { labels: rows.map(r=>r.tipo), datasets: [{ label:'Ingresos', data:rows.map(r=>num(r.ingresos)), backgroundColor:'rgba(201,163,90,.18)', borderColor:'#c9a35a', borderWidth:2, borderRadius:6 }] },
+    options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false }, tooltip:{ ...ct.tooltip, callbacks:{ label: ctx=>' '+Fmt.currency(ctx.parsed.y) } } }, scales:{ x:{ grid:{ display:false }, ticks:{ color:ct.tick, font:{size:11} } }, y:{ grid:{ color:ct.grid }, ticks:{ color:ct.tick, font:{size:11}, callback:v=>Fmt.currencyShort(v) } } } }
   });
 }
 
-function renderChartEventosCategoria(r) {
+function renderChartEventosCategoria() {
   destroyChartCategoria('evCat');
   const ct = chartTheme();
-  const labels = Object.keys(r.categorias);
-  const values = labels.map(l => r.categorias[l].eventos);
-  if (!labels.length) return;
+  const rows = reporteCategoria?.eventosTipo || [];
   chartsCategoria.evCat = new Chart(document.getElementById('chartEventosCategoria'), {
     type: 'doughnut',
-    data: { labels, datasets:[{ data:values, backgroundColor:CHART_COLORS, borderColor:ct.ringBg, borderWidth:3, hoverOffset:5 }] },
-    options: {
-      responsive:true, maintainAspectRatio:false, cutout:'60%',
-      plugins: { legend:{ position:'right', labels:{ font:{size:11}, color:ct.legend, boxWidth:12 } }, tooltip:{ ...ct.tooltip } }
-    }
+    data: { labels: rows.map(r=>r.tipo), datasets:[{ data:rows.map(r=>num(r.eventos)), backgroundColor:rows.map((r,i)=>r.color || CHART_COLORS[i % CHART_COLORS.length]), borderColor:ct.ringBg, borderWidth:3, hoverOffset:5 }] },
+    options: { responsive:true, maintainAspectRatio:false, cutout:'60%', plugins:{ legend:{ position:'right', labels:{ font:{size:11}, color:ct.legend, boxWidth:12 } }, tooltip:{ ...ct.tooltip } } }
   });
 }
 
-function renderTblCategoria(r) {
+function renderTblCategoria() {
   const tbl = document.getElementById('tblCategoria');
-  const entries = Object.entries(r.categorias);
+  const rows = reporteCategoria?.eventosTipo || [];
+  const totalIngresos = rows.reduce((s,r)=>s+num(r.ingresos),0);
   tbl.innerHTML = `<thead><tr><th>Categoría</th><th>Eventos</th><th>Ingresos</th><th style="width:90px">% Ingresos</th></tr></thead>`;
   const tbody = document.createElement('tbody');
-  entries.forEach(([tipo, d]) => {
-    const pct = r.totalIngresos ? Math.round(d.ingresos / r.totalIngresos * 100) : 0;
+  rows.forEach(r => {
+    const pct = totalIngresos ? Math.round(num(r.ingresos) / totalIngresos * 100) : 0;
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${badge(tipo)}</td><td>${d.eventos}</td><td>${Fmt.currency(d.ingresos)}</td><td>${pct}%</td>`;
+    tr.innerHTML = `<td>${badge(r.tipo)}</td><td>${num(r.eventos)}</td><td>${Fmt.currency(num(r.ingresos))}</td><td>${pct}%</td>`;
     tbody.appendChild(tr);
   });
-  if (!entries.length) tbody.innerHTML = `<tr><td colspan="4" style="padding:24px;text-align:center;color:var(--txt-muted)">Sin datos para el periodo/categoría seleccionados</td></tr>`;
+  if (!rows.length) tbody.innerHTML = `<tr><td colspan="4" style="padding:24px;text-align:center;color:var(--txt-muted)">Sin datos para el periodo/categoría seleccionados</td></tr>`;
   tbl.appendChild(tbody);
 }
 
-function actualizarReporteCategoria() {
-  const r = calcularReporteCategoria();
-  renderStatRowCategoria(r);
-  renderChartIngresosCategoria(r);
-  renderChartEventosCategoria(r);
-  renderTblCategoria(r);
+async function actualizarReporteCategoria() {
+  const { data, error } = await reportesService.getResumen({ ...filtrosActuales(), limite: 12 });
+  if (error) { Toast.error(error); return; }
+  reporteCategoria = data;
+  renderStatRowCategoria();
+  renderChartIngresosCategoria();
+  renderChartEventosCategoria();
+  renderTblCategoria();
 }
 
 function exportarCategoriaExcel() {
-  const r = calcularReporteCategoria();
   const rows = [['Categoría','Eventos','Ingresos (S/)','% Ingresos']];
-  Object.entries(r.categorias).forEach(([tipo,d]) => {
-    const pct = r.totalIngresos ? Math.round(d.ingresos/r.totalIngresos*100) : 0;
-    rows.push([tipo, d.eventos, d.ingresos, pct+'%']);
-  });
-  rows.push([]);
-  rows.push(['Total Eventos', r.eventos.length]);
-  rows.push(['Total Reservas', r.reservas.length]);
-  rows.push(['Total Ingresos del periodo', r.totalIngresos]);
-  descargarCSV(rows, 'reporte_categoria_periodo.xlsx');
+  const datos = reporteCategoria?.eventosTipo || [];
+  const totalIngresos = datos.reduce((s,r)=>s+num(r.ingresos),0);
+  datos.forEach(r => rows.push([r.tipo, num(r.eventos), num(r.ingresos), (totalIngresos ? Math.round(num(r.ingresos)/totalIngresos*100) : 0)+'%']));
+  descargarExcel(rows, 'reporte_categoria_periodo.xlsx');
   Toast.success('Excel exportado ✓');
 }
 
 function exportarCategoriaPDF() {
-  const r = calcularReporteCategoria();
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
-  const mesTxt  = document.getElementById('filtroMes').selectedOptions[0].textContent;
+  const mesTxt = document.getElementById('filtroMes').selectedOptions[0].textContent;
   const anioTxt = document.getElementById('filtroAnio').selectedOptions[0].textContent;
-  const catTxt  = document.getElementById('filtroCategoria').selectedOptions[0].textContent;
+  const catTxt = document.getElementById('filtroCategoria').selectedOptions[0].textContent;
+  const datos = reporteCategoria?.eventosTipo || [];
+  const totalIngresos = datos.reduce((s,r)=>s+num(r.ingresos),0);
 
   doc.setFontSize(16);
   doc.text('Reporte por Categoría y Periodo', 14, 18);
   doc.setFontSize(10);
   doc.text(`Periodo: ${mesTxt} ${anioTxt}  ·  Categoría: ${catTxt}`, 14, 26);
-
-  doc.autoTable({
-    startY: 34,
-    head: [['Métrica','Valor']],
-    body: [
-      ['Total Eventos', r.eventos.length],
-      ['Total Reservas', r.reservas.length],
-      ['Total Ingresos del periodo', Fmt.currency(r.totalIngresos)],
-    ],
-    styles: { fontSize: 10 },
-    headStyles: { fillColor: [201,163,90] },
-  });
-
-  doc.autoTable({
-    startY: doc.lastAutoTable.finalY + 10,
-    head: [['Categoría','Eventos','Ingresos','% Ingresos']],
-    body: Object.entries(r.categorias).map(([tipo,d]) => [tipo, d.eventos, Fmt.currency(d.ingresos), (r.totalIngresos ? Math.round(d.ingresos/r.totalIngresos*100) : 0)+'%']),
-    styles: { fontSize: 10 },
-    headStyles: { fillColor: [201,163,90] },
-  });
-
+  doc.autoTable({ startY:34, head:[['Categoría','Eventos','Ingresos','% Ingresos']], body:datos.map(r => [r.tipo, num(r.eventos), Fmt.currency(num(r.ingresos)), (totalIngresos ? Math.round(num(r.ingresos)/totalIngresos*100) : 0)+'%']), styles:{ fontSize:10 }, headStyles:{ fillColor:[201,163,90] } });
   doc.save('reporte_categoria_periodo.pdf');
   Toast.success('PDF exportado ✓');
 }
 
-/* ── Init ───────────────────────────────────────────────────────────── */
-poblarFiltrosCategoria();
-actualizarTodo();
-Theme.onChange(() => { renderChartIngresos(); renderChartEventosTipo(); renderChartReservas(); renderChartIngresosCategoria(calcularReporteCategoria()); renderChartEventosCategoria(calcularReporteCategoria()); });
+async function poblarFiltrosCategoria() {
+  const selMes = document.getElementById('filtroMes');
+  MESES.forEach((m,i) => { const o = document.createElement('option'); o.value = i; o.textContent = m; selMes.appendChild(o); });
+  const selAnio = document.getElementById('filtroAnio');
+  const actual = new Date().getFullYear();
+  for (let y = actual; y >= actual - 5; y--) { const o = document.createElement('option'); o.value = y; o.textContent = y; selAnio.appendChild(o); }
+  selAnio.value = String(actual);
+
+  const resTipos = await reportesService.getTiposEvento();
+  if (resTipos.error) { Toast.error(resTipos.error); return; }
+  tiposEvento = resTipos.data || [];
+  const selTipo = document.getElementById('filtroCategoria');
+  tiposEvento.forEach(t => { const o = document.createElement('option'); o.value = t.id; o.textContent = t.nombre; selTipo.appendChild(o); });
+}
+
+async function actualizarTodo() {
+  renderLoading();
+  const { data, error } = await reportesService.getResumen({ ...filtrosActuales(), limite: 10 });
+  if (error) { Toast.error(error); return; }
+  reporte = data;
+  renderStats();
+  renderChartIngresos();
+  renderChartEventosTipo();
+  renderChartEventosEstado();
+  renderTblClientes();
+  renderTblGastosCategoria();
+  renderTblBoletas();
+  await actualizarReporteCategoria();
+}
+
+window.actualizarTodo = actualizarTodo;
+window.exportarResumen = exportarResumen;
+window.exportarIngresos = exportarIngresos;
+window.exportarClientes = exportarClientes;
+window.actualizarReporteCategoria = actualizarReporteCategoria;
+window.exportarCategoriaExcel = exportarCategoriaExcel;
+window.exportarCategoriaPDF = exportarCategoriaPDF;
+
+await poblarFiltrosCategoria();
+await actualizarTodo();
+Theme.onChange(() => {
+  if (!reporte) return;
+  renderChartIngresos();
+  renderChartEventosTipo();
+  renderChartEventosEstado();
+  renderChartIngresosCategoria();
+  renderChartEventosCategoria();
+});
 </script>
 </body>
 </html>
