@@ -127,7 +127,7 @@
       <label>Subir imagen o video</label>
       <input type="file" id="anexoFile" class="form-input" accept="image/*,video/*"/>
     </div>
-    <div id="anexoProgress" style="display:none;font-size:12.5px;color:var(--txt-muted);margin:-6px 0 12px">Subiendo… <span id="anexoPct">0%</span></div>
+    <div id="anexoProgress" style="display:none;font-size:12.5px;color:var(--txt-muted);margin:-6px 0 12px">Subiendo…</div>
     <div id="anexosGrid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:4px"></div>
     <div class="modal-footer">
       <button class="btn btn--outline" onclick="cerrarAnexos()">Cerrar</button>
@@ -144,8 +144,6 @@
 <script type="module">
 import * as eventosService from './js/services/eventosService.js';
 import * as clientesService from './js/services/clientesService.js';
-import { storage } from './js/firebase.js';
-import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js';
 
 let editandoId = null;
 let todosLosEventos = [];
@@ -372,8 +370,7 @@ function exportarCSV() {
   Toast.success('Excel exportado ✓');
 }
 
-/* ── Anexos (Firebase + Supabase) ───────────────────────────────────── */
-const MAX_MB = 50;
+/* ── Anexos (Supabase Storage + Supabase) ─────────────────────────────── */
 
 async function cargarAnexos(eventoId) {
   const { data, error } = await eventosService.getAnexos(eventoId);
@@ -415,56 +412,32 @@ function cerrarAnexos() {
   document.getElementById('anexoProgress').style.display = 'none';
 }
 
-document.getElementById('anexoFile').addEventListener('change', (e) => {
+document.getElementById('anexoFile').addEventListener('change', async (e) => {
   const file = e.target.files[0];
   if (!file) return;
-  const esImagen = file.type.startsWith('image/');
-  const esVideo = file.type.startsWith('video/');
-  if (!esImagen && !esVideo) { Toast.error('Solo se permiten imágenes o videos'); e.target.value = ''; return; }
-  if (file.size > MAX_MB * 1024 * 1024) { Toast.error(`El archivo no debe superar ${MAX_MB}MB`); e.target.value = ''; return; }
 
-  const path = `anexos/${anexoEventoId}/${Date.now()}_${file.name}`;
-  const sref = ref(storage, path);
-  const tarea = uploadBytesResumable(sref, file);
   const progEl = document.getElementById('anexoProgress');
-  const pctEl = document.getElementById('anexoPct');
   progEl.style.display = 'block';
 
-  tarea.on('state_changed', snap => {
-    pctEl.textContent = Math.round((snap.bytesTransferred / snap.totalBytes) * 100) + '%';
-  }, () => {
-    Toast.error('Fallo al subir a Firebase');
-    progEl.style.display = 'none';
-    e.target.value = '';
-  }, async () => {
-    const url = await getDownloadURL(sref);
-    const { error } = await eventosService.agregarAnexo({
-      evento_id: anexoEventoId,
-      tipo: esVideo ? 'video' : 'imagen',
-      nombre_archivo: file.name,
-      storage_path: path,
-      url
-    });
-    progEl.style.display = 'none';
-    e.target.value = '';
-    if (error) {
-      Toast.error('Archivo subido pero error al guardar metadatos en BD');
-      return;
-    }
-    Toast.success('Anexo subido ✓');
-    await cargarAnexos(anexoEventoId);
-  });
+  const { error } = await eventosService.subirAnexo(anexoEventoId, file);
+
+  progEl.style.display = 'none';
+  e.target.value = '';
+
+  if (error) {
+    Toast.error(`No se pudo subir el anexo — ${error}`);
+    return;
+  }
+  Toast.success('Anexo subido ✓');
+  await cargarAnexos(anexoEventoId);
 });
 
 async function eliminarAnexo(id, storagePath) {
   const ok = await Confirm({ title: '¿Eliminar anexo?', message: 'Esta acción no se puede deshacer.', okText: 'Sí, eliminar' });
   if (!ok) return;
-  
-  if (storagePath) {
-    try { await deleteObject(ref(storage, storagePath)); } catch (err) { console.warn('No se pudo borrar de Firebase', err); }
-  }
-  const { error } = await eventosService.eliminarAnexoBD(id);
-  if (error) { Toast.error('Error al eliminar de la base de datos'); return; }
+
+  const { error } = await eventosService.eliminarAnexo(id, storagePath);
+  if (error) { Toast.error('Error al eliminar: ' + error); return; }
   Toast.success('Anexo eliminado');
   await cargarAnexos(anexoEventoId);
 }

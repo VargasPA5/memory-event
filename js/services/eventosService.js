@@ -257,7 +257,8 @@ export const agregarAnexo = async (payload) => {
 
 /**
  * Elimina el registro del anexo de la BD.
- * (El archivo físico en Firebase debe borrarse separadamente).
+ * Uso interno de eliminarAnexo(); llamar directo solo si el archivo físico
+ * ya no existe en Storage (fila huérfana).
  * @param {number} id
  */
 export const eliminarAnexoBD = async (id) => {
@@ -267,5 +268,61 @@ export const eliminarAnexoBD = async (id) => {
     .eq('id', id);
 
   if (error) return { data: null, error: _err(error, `eliminarAnexoBD(${id})`) };
+  return { data: true, error: null };
+};
+
+/* ── Adjuntos físicos (Supabase Storage, bucket público `adjuntos`) ───────
+   Cada objeto vive bajo {evento_id}/... — impuesto por RLS sobre
+   storage.objects (ver 20260709000017), validado contra la fila real de
+   `eventos` (mismo dueño o administrador). */
+const ADJUNTOS_BUCKET = 'adjuntos';
+const MAX_ANEXO_MB = 50;
+
+/**
+ * Sube el archivo físico a Storage y guarda su metadata en evento_anexos.
+ * Si falla el guardado en BD, borra el archivo recién subido (evita huérfanos).
+ * @param {number} eventoId
+ * @param {File} file
+ */
+export const subirAnexo = async (eventoId, file) => {
+  const esImagen = file.type.startsWith('image/');
+  const esVideo = file.type.startsWith('video/');
+  if (!esImagen && !esVideo) return { data: null, error: 'Solo se permiten imágenes o videos' };
+  if (file.size > MAX_ANEXO_MB * 1024 * 1024) return { data: null, error: `El archivo no debe superar ${MAX_ANEXO_MB}MB` };
+
+  const path = `${eventoId}/${Date.now()}_${file.name}`;
+  const { error: uploadError } = await supabase.storage
+    .from(ADJUNTOS_BUCKET)
+    .upload(path, file, { upsert: false, contentType: file.type });
+  if (uploadError) return { data: null, error: _err(uploadError, 'subirAnexo.upload') };
+
+  const { data: pub } = supabase.storage.from(ADJUNTOS_BUCKET).getPublicUrl(path);
+
+  const { data, error } = await agregarAnexo({
+    evento_id: eventoId,
+    tipo: esVideo ? 'video' : 'imagen',
+    nombre_archivo: file.name,
+    storage_path: path,
+    url: pub.publicUrl,
+  });
+  if (error) {
+    await supabase.storage.from(ADJUNTOS_BUCKET).remove([path]).catch(() => {});
+    return { data: null, error };
+  }
+  return { data, error: null };
+};
+
+/**
+ * Borra el archivo físico en Storage (best-effort) y el registro en BD.
+ * @param {number} id
+ * @param {string} storagePath
+ */
+export const eliminarAnexo = async (id, storagePath) => {
+  if (storagePath) {
+    const { error: delError } = await supabase.storage.from(ADJUNTOS_BUCKET).remove([storagePath]);
+    if (delError) console.warn('[eventosService] No se pudo borrar el anexo en Storage:', delError);
+  }
+  const { error } = await eliminarAnexoBD(id);
+  if (error) return { data: null, error };
   return { data: true, error: null };
 };

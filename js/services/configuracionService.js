@@ -1,18 +1,11 @@
 /* ── configuracionService.js ─────────────────────────────────────────────
    Capa de acceso a datos para `configuracion_sistema` (fila única, id = 1).
    RLS: lectura abierta, escritura solo Administrador (es_administrador()).
-   El logo se sube como archivo físico a Firebase Storage; su metadata
-   (logo_url, logo_storage_path) siempre vive en esta tabla, nunca en
-   Firestore. */
+   El logo se sube como archivo físico a Supabase Storage (bucket público
+   `business`, RLS sobre storage.objects restringida a Administrador); su
+   metadata (logo_url, logo_storage_path) siempre vive en esta tabla. */
 
 import { supabase } from '../supabaseClient.js';
-import { storage } from '../firebase.js';
-import {
-  ref,
-  uploadBytesResumable,
-  getDownloadURL,
-  deleteObject,
-} from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js';
 
 const CAMPOS = 'id, nombre_sistema, moneda, zona_horaria, porcentaje_impuesto, formato_fecha, razon_social, ruc, telefono, email, direccion, web, logo_url, logo_storage_path, updated_at';
 
@@ -21,6 +14,7 @@ const CAMPOS_EDITABLES = [
   'razon_social', 'ruc', 'telefono', 'email', 'direccion', 'web',
 ];
 
+const LOGO_BUCKET = 'business';
 const MAX_LOGO_MB = 5;
 const TIPOS_LOGO_PERMITIDOS = ['image/jpeg', 'image/png', 'image/webp'];
 
@@ -84,11 +78,11 @@ export const actualizarLogo = async (logoUrl, logoStoragePath) => {
   return { data, error: null };
 };
 
-/* Sube el archivo físico a Firebase Storage y guarda su metadata en
-   `configuracion_sistema` (Supabase). Borra el logo anterior en Storage
+/* Sube el archivo físico a Supabase Storage (bucket `business`) y guarda su
+   metadata en `configuracion_sistema`. Borra el logo anterior en Storage
    solo después de que la metadata nueva quedó confirmada, para no dejar
    la fila apuntando a un archivo ya borrado si algo falla a mitad de camino. */
-export const subirLogo = async (file, onProgress) => {
+export const subirLogo = async (file) => {
   if (!TIPOS_LOGO_PERMITIDOS.includes(file.type)) {
     return { data: null, error: 'Solo se permiten imágenes JPG, PNG o WebP' };
   }
@@ -98,30 +92,24 @@ export const subirLogo = async (file, onProgress) => {
 
   const { data: previo } = await obtenerLogo();
 
-  const path = `logo/sistema/${Date.now()}_${file.name}`;
-  const sref = ref(storage, path);
-  const task = uploadBytesResumable(sref, file);
+  const path = `sistema/${Date.now()}_${file.name}`;
+  const { error: uploadError } = await supabase.storage
+    .from(LOGO_BUCKET)
+    .upload(path, file, { upsert: false, contentType: file.type });
+  if (uploadError) return { data: null, error: _err(uploadError, 'subirLogo.upload') };
 
-  let url;
-  try {
-    url = await new Promise((resolve, reject) => {
-      task.on(
-        'state_changed',
-        (snap) => onProgress?.((snap.bytesTransferred / snap.totalBytes) * 100),
-        reject,
-        () => getDownloadURL(sref).then(resolve, reject)
-      );
-    });
-  } catch (error) {
-    return { data: null, error: error?.message || 'No se pudo subir el logo a Storage' };
-  }
+  const { data: pub } = supabase.storage.from(LOGO_BUCKET).getPublicUrl(path);
+  const url = pub.publicUrl;
 
   const { data, error } = await actualizarLogo(url, path);
-  if (error) return { data: null, error };
+  if (error) {
+    await supabase.storage.from(LOGO_BUCKET).remove([path]).catch(() => {});
+    return { data: null, error };
+  }
 
   if (previo?.logo_storage_path) {
-    try { await deleteObject(ref(storage, previo.logo_storage_path)); }
-    catch (err) { console.warn('[configuracionService] No se pudo borrar el logo anterior en Storage', err); }
+    const { error: delError } = await supabase.storage.from(LOGO_BUCKET).remove([previo.logo_storage_path]);
+    if (delError) console.warn('[configuracionService] No se pudo borrar el logo anterior en Storage:', delError);
   }
 
   return { data: { url, path, configuracion: data }, error: null };
@@ -133,8 +121,8 @@ export const eliminarLogo = async () => {
   if (error) return { data: null, error };
 
   if (previo?.logo_storage_path) {
-    try { await deleteObject(ref(storage, previo.logo_storage_path)); }
-    catch (err) { console.warn('[configuracionService] No se pudo borrar el logo en Storage', err); }
+    const { error: delError } = await supabase.storage.from(LOGO_BUCKET).remove([previo.logo_storage_path]);
+    if (delError) console.warn('[configuracionService] No se pudo borrar el logo en Storage:', delError);
   }
 
   return { data, error: null };

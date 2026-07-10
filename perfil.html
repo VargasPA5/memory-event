@@ -100,12 +100,12 @@
           <div class="hero-avatar-wrap">
             <div class="hero-avatar" id="heroAvatar"></div>
             <div class="hero-avatar-overlay" id="avatarOverlay" hidden>
-              <svg width="40" height="40" viewBox="0 0 36 36">
+              <svg width="40" height="40" viewBox="0 0 36 36" id="avatarRingSvg">
                 <circle cx="18" cy="18" r="15.5" fill="none" stroke="rgba(255,255,255,.25)" stroke-width="3"/>
                 <circle cx="18" cy="18" r="15.5" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round"
                         id="avatarRingProgress" transform="rotate(-90 18 18)"/>
               </svg>
-              <span class="avatar-pct" id="avatarPct">0%</span>
+              <span class="avatar-pct" id="avatarPct">Subiendo…</span>
             </div>
             <label class="hero-avatar-edit" id="avatarEditBtn" title="Cambiar foto de perfil">
               <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M2 6a2 2 0 012-2h1.586a1 1 0 00.707-.293l.828-.828A2 2 0 018.828 2h2.344a2 2 0 011.414.586l.828.828A1 1 0 0014.12 4H16a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zm8 2a3 3 0 100 6 3 3 0 000-6z" clip-rule="evenodd"/></svg>
@@ -362,38 +362,34 @@ cargarPerfil();
 </script>
 
 <script type="module">
-  import { storage } from './js/firebase.js';
-  import { actualizarPerfil } from './js/services/perfilesService.js';
-  import { ref, uploadBytesResumable, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js';
+  import { subirAvatar, eliminarAvatar } from './js/services/perfilesService.js';
 
-  const MAX_MB = 5;
-  const R = 15.5;
-  const CIRC = 2 * Math.PI * R;
   const AVATAR_COLORS_PROFILE = ['#c9a35a','#10b981','#f59e0b','#3b82f6','#ec4899','#8b5cf6','#14b8a6','#f97316'];
 
   const els = {
     file:      document.getElementById('avatarFile'),
     editBtn:   document.getElementById('avatarEditBtn'),
     overlay:   document.getElementById('avatarOverlay'),
+    ringSvg:   document.getElementById('avatarRingSvg'),
     ring:      document.getElementById('avatarRingProgress'),
     pct:       document.getElementById('avatarPct'),
     removeBtn: document.getElementById('avatarRemoveBtn'),
     heroAvatar:document.getElementById('heroAvatar'),
   };
-  els.ring.style.strokeDasharray = String(CIRC);
-  els.ring.style.strokeDashoffset = String(CIRC);
+  /* Supabase Storage no expone progreso de subida por bytes (a diferencia de
+     Firebase antes), así que el anillo se muestra como spinner indeterminado
+     en vez de un porcentaje real: un arco fijo (25% de la circunferencia)
+     girando con la animación `spin` ya existente en css/styles.css. */
+  const R = 15.5;
+  const CIRC = 2 * Math.PI * R;
+  els.ring.style.strokeDasharray = `${CIRC * 0.25} ${CIRC}`;
 
   let uploading = false;
-
-  const setProgress = (pct) => {
-    els.ring.style.strokeDashoffset = String(CIRC * (1 - Math.min(100, Math.max(0, pct)) / 100));
-    els.pct.textContent = Math.round(pct) + '%';
-  };
 
   const showOverlay = (show) => {
     els.overlay.hidden = !show;
     els.editBtn.classList.toggle('is-disabled', show);
-    if (show) setProgress(0);
+    els.ringSvg.style.animation = show ? 'spin 0.8s linear infinite' : '';
   };
 
   /* Única fuente de verdad para pintar el avatar (hero) — cargarPerfil()
@@ -427,9 +423,6 @@ cargarPerfil();
     const u = Auth.get();
     if (!u) return;
 
-    if (!file.type.startsWith('image/')) { Toast.error('Solo se permiten imágenes'); e.target.value = ''; return; }
-    if (file.size > MAX_MB * 1024 * 1024) { Toast.error(`La imagen no debe superar ${MAX_MB}MB`); e.target.value = ''; return; }
-
     const previousAvatar = u.avatar || '';
     const previewUrl = URL.createObjectURL(file);
     renderAvatar(previewUrl, u.nombre, u.id); // vista previa instantánea, sin esperar la red
@@ -437,36 +430,24 @@ cargarPerfil();
     uploading = true;
     showOverlay(true);
 
-    try {
-      const path = `avatars/${u.id}/${Date.now()}_${file.name}`;
-      const sref = ref(storage, path);
-      const task = uploadBytesResumable(sref, file);
+    const { data, error } = await subirAvatar(file);
 
-      const url = await new Promise((resolve, reject) => {
-        task.on('state_changed',
-          snap => setProgress((snap.bytesTransferred / snap.totalBytes) * 100),
-          reject,
-          () => getDownloadURL(sref).then(resolve, reject)
-        );
-      });
-
-      const { error } = await actualizarPerfil({ avatar_url: url });
-      if (error) throw new Error(error);
+    if (error) {
+      console.error('No se pudo subir o guardar la foto de perfil:', error);
+      renderAvatar(previousAvatar, u.nombre, u.id);
+      Toast.show(`No se pudo actualizar la foto — ${error}. Revisa la consola (F12) para más detalle.`, 'error', 6000);
+    } else {
       await Auth.refresh();
       const actualizado = Auth.get();
-      renderAvatar(url, actualizado?.nombre || u.nombre, actualizado?.id || u.id);
+      renderAvatar(data.url, actualizado?.nombre || u.nombre, actualizado?.id || u.id);
       refreshShellAvatars();
       Toast.success('Foto de perfil actualizada ✓');
-    } catch (err) {
-      console.warn('No se pudo subir o guardar la foto de perfil', err);
-      renderAvatar(previousAvatar, u.nombre, u.id);
-      Toast.error('No se pudo actualizar la foto. Intenta nuevamente.');
-    } finally {
-      uploading = false;
-      showOverlay(false);
-      e.target.value = '';
-      URL.revokeObjectURL(previewUrl);
     }
+
+    uploading = false;
+    showOverlay(false);
+    e.target.value = '';
+    URL.revokeObjectURL(previewUrl);
   });
 
   els.removeBtn.addEventListener('click', async () => {
@@ -474,7 +455,7 @@ cargarPerfil();
     if (!u || uploading) return;
     const ok = await Confirm({ title: 'Quitar foto de perfil', message: 'Tu avatar volverá a mostrar tus iniciales.', okText: 'Quitar', type: 'warning' });
     if (!ok) return;
-    const { error } = await actualizarPerfil({ avatar_url: '' });
+    const { error } = await eliminarAvatar();
     if (error) { Toast.error(error); return; }
     await Auth.refresh();
     renderAvatar('', u.nombre, u.id);

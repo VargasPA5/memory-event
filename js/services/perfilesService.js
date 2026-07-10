@@ -91,3 +91,51 @@ export const actualizarRol = async (id, rol) => {
   if (error) return { data: null, error: _err(error, 'actualizarRol') };
   return { data: _withDerivedFields(data), error: null };
 };
+
+/* ── Avatar (Supabase Storage, bucket público `avatars`) ──────────────────
+   Cada usuario sube únicamente a su propia carpeta {uid}/... (impuesto por
+   RLS sobre storage.objects, ver 20260709000016). No se borra el avatar
+   anterior en Storage al reemplazarlo: `perfiles` no guarda un storage_path
+   separado del `avatar_url` (mismo comportamiento que tenía el flujo previo
+   con Firebase), así que un reemplazo deja el archivo viejo huérfano en el
+   bucket — aceptable para este alcance, revisar si el volumen crece. */
+const AVATAR_BUCKET = 'avatars';
+const MAX_AVATAR_MB = 5;
+const TIPOS_AVATAR_PERMITIDOS = ['image/jpeg', 'image/png', 'image/webp'];
+
+export const subirAvatar = async (file) => {
+  if (!TIPOS_AVATAR_PERMITIDOS.includes(file.type)) {
+    return { data: null, error: 'Solo se permiten imágenes JPG, PNG o WebP' };
+  }
+  if (file.size > MAX_AVATAR_MB * 1024 * 1024) {
+    return { data: null, error: `La imagen no debe superar ${MAX_AVATAR_MB}MB` };
+  }
+
+  const { data: authData, error: authError } = await supabase.auth.getUser();
+  if (authError) return { data: null, error: _err(authError, 'subirAvatar.auth') };
+  const uid = authData?.user?.id;
+  if (!uid) return { data: null, error: 'No hay sesión activa' };
+
+  const path = `${uid}/${Date.now()}_${file.name}`;
+  const { error: uploadError } = await supabase.storage
+    .from(AVATAR_BUCKET)
+    .upload(path, file, { upsert: false, contentType: file.type });
+  if (uploadError) return { data: null, error: _err(uploadError, 'subirAvatar.upload') };
+
+  const { data: pub } = supabase.storage.from(AVATAR_BUCKET).getPublicUrl(path);
+  const url = pub.publicUrl;
+
+  const { data: perfil, error: perfilError } = await actualizarPerfil({ avatar_url: url });
+  if (perfilError) {
+    await supabase.storage.from(AVATAR_BUCKET).remove([path]).catch(() => {});
+    return { data: null, error: perfilError };
+  }
+
+  return { data: { url, path, perfil }, error: null };
+};
+
+export const eliminarAvatar = async () => {
+  const { data, error } = await actualizarPerfil({ avatar_url: '' });
+  if (error) return { data: null, error };
+  return { data, error: null };
+};
