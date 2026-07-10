@@ -295,6 +295,19 @@
     backdrop-filter:blur(20px) saturate(135%);
   }
   .pf-brand-icon { filter:drop-shadow(0 8px 16px rgba(201,163,90,.24)); }
+  .pf-brand-icon {
+    border-radius:50%;
+    overflow:hidden;
+    align-items:center;
+    justify-content:center;
+  }
+  .pf-brand-icon img,
+  .pf-brand-icon svg {
+    width:100%;
+    height:100%;
+    border-radius:50%;
+    object-fit:cover;
+  }
   .pf-brand-name { color:var(--pf-ink); font-size:24px; }
   .pf-nav-links { gap:8px; padding:4px; background:rgba(243,239,231,.72); border-radius:999px; }
   .pf-nav-link {
@@ -859,13 +872,40 @@ AppLogo.paintInto('.pf-brand-icon');
 AppLogo.onChange(() => AppLogo.paintInto('.pf-brand-icon'));
 
 const publicAccountBtn = document.getElementById('publicAccountBtn');
-const publicSession = typeof Auth !== 'undefined' ? Auth.get() : null;
-if (publicAccountBtn && publicSession) {
+const updatePublicAccountBtn = (publicSession) => {
+  if (!publicAccountBtn || !publicSession) return;
   const rol = publicSession.rol === 'Administrador' ? 'Admin' : 'Planificador';
   publicAccountBtn.href = 'dashboard.html';
   publicAccountBtn.querySelector('span').textContent = `Mi Cuenta ${rol}`;
   publicAccountBtn.title = 'Ir al dashboard';
+};
+
+async function syncPublicAccountBtn() {
+  const cachedSession = typeof Auth !== 'undefined' ? Auth.get() : null;
+  if (cachedSession) {
+    updatePublicAccountBtn(cachedSession);
+    return;
+  }
+
+  try {
+    const { supabase } = await import('./js/supabaseClient.js');
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { data: perfil, error } = await supabase
+      .from('perfiles')
+      .select('*')
+      .eq('id', user.id)
+      .single();
+
+    if (error || !perfil || perfil.estado !== 'Activo') return;
+    const session = typeof Auth !== 'undefined' ? Auth.set(perfil, user.email) : { rol: perfil.rol };
+    updatePublicAccountBtn(session);
+  } catch {
+    /* La landing sigue mostrando "Iniciar sesión" si no se puede verificar. */
+  }
 }
+syncPublicAccountBtn();
 
 const landingNav = document.querySelector('.pf-nav');
 const updateLandingNav = () => landingNav?.classList.toggle('is-scrolled', window.scrollY > 12);
