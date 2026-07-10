@@ -11,8 +11,8 @@
    RLS: un usuario solo ve sus propias notificaciones (destinatario_id = auth.uid()).
    Un Administrador ve todas.
 
-   Este servicio reemplaza la lógica de `buildNotifItems()` en app.js,
-   que actualmente construye notificaciones artificialmente desde localStorage. */
+   Este servicio alimenta el topbar global y reemplaza las notificaciones
+   artificiales que antes se construían desde datos locales. */
 
 import { supabase } from '../supabaseClient.js';
 

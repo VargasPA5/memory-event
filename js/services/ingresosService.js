@@ -127,6 +127,32 @@ export const getByReserva = async (reservaId) => {
 };
 
 /**
+ * Busca ingresos por código o concepto para la búsqueda global.
+ * @param {string} query
+ */
+export const buscar = async (query) => {
+  if (!query || query.length < 2) return { data: [], error: null };
+
+  const { data, error } = await supabase
+    .from('ingresos')
+    .select(`
+      id,
+      codigo,
+      concepto,
+      monto,
+      fecha,
+      estado,
+      cliente:clientes (nombre),
+      reserva:reservas (codigo)
+    `)
+    .or(`codigo.ilike.%${query}%,concepto.ilike.%${query}%`)
+    .limit(10);
+
+  if (error) return { data: null, error: _err(error, `buscar("${query}")`) };
+  return { data, error: null };
+};
+
+/**
  * Registra un nuevo ingreso (pago).
  * - Si viene con reserva_id, el trigger hereda planificador_id automáticamente.
  * - El trigger fn_generar_boleta crea la boleta automáticamente.

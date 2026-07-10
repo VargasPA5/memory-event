@@ -1,10 +1,7 @@
 /* ── logo.js — Logo del sistema, compartido por toda la app ───────────
-   Patrón análogo a theme.js: cachea el logo en localStorage para pintarlo
-   al instante (sidebar, login, landing, favicon) y lo sincroniza con el
-   documento Firestore `config/sistema` en segundo plano. La subida real
-   (Storage + Firestore + borrado de archivos huérfanos) vive en
-   configuracion.html, que es la única vista con permiso para cambiarla;
-   este módulo solo expone lectura + notificación de cambios. */
+   Cachea el logo en localStorage para pintarlo al instante y lo sincroniza
+   con `configuracion_sistema` en Supabase. localStorage se usa solo como
+   caché visual, nunca como fuente de negocio. */
 const AppLogo = (() => {
   const KEY = 'ep:logo'; // { url, path } | null
   const listeners = [];
@@ -32,8 +29,6 @@ const AppLogo = (() => {
 
   const get = () => current;
 
-  /* Actualiza caché local + favicon + notifica a los suscriptores de esta
-     pestaña (usado por configuracion.html justo después de subir/borrar). */
   const setLocal = (data) => {
     current = data || null;
     writeCache(current);
@@ -43,9 +38,6 @@ const AppLogo = (() => {
 
   const onChange = (fn) => { listeners.push(fn); return () => listeners.splice(listeners.indexOf(fn), 1); };
 
-  /* Reemplaza el contenido de los contenedores de marca (logo "M" por
-     defecto) con el logo subido, si existe. Para usar en páginas estáticas
-     como login.html / index.html que no reconstruyen su HTML dinámicamente. */
   const paintInto = (selector) => {
     if (!current?.url) return;
     document.querySelectorAll(selector).forEach(el => {
@@ -53,23 +45,26 @@ const AppLogo = (() => {
     });
   };
 
-  const syncFromFirestore = async () => {
+  const syncFromSupabase = async () => {
     try {
-      const [{ db }, fsMod] = await Promise.all([
-        import('./firebase.js'),
-        import('https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js'),
-      ]);
-      const snap = await fsMod.getDoc(fsMod.doc(db, 'config', 'sistema'));
-      const data = snap.exists() ? snap.data() : null;
-      const next = data?.logoUrl ? { url: data.logoUrl, path: data.logoPath || '' } : null;
+      const { supabase } = await import('./supabaseClient.js');
+      const { data, error } = await supabase
+        .from('configuracion_sistema')
+        .select('logo_url, logo_storage_path')
+        .eq('id', 1)
+        .maybeSingle();
+
+      if (error) throw error;
+
+      const next = data?.logo_url ? { url: data.logo_url, path: data.logo_storage_path || '' } : null;
       if (JSON.stringify(next) !== JSON.stringify(current)) setLocal(next);
     } catch (err) {
-      console.warn('No se pudo sincronizar el logo del sistema con Firebase', err);
+      console.warn('No se pudo sincronizar el logo del sistema con Supabase', err);
     }
   };
 
   if (current?.url) applyFavicon(current.url);
-  syncFromFirestore();
+  syncFromSupabase();
 
-  return { get, setLocal, onChange, paintInto, syncFromFirestore };
+  return { get, setLocal, onChange, paintInto, syncFromSupabase };
 })();

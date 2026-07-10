@@ -177,61 +177,79 @@ const _timeAgo = ts => {
   return `Hace ${Math.floor(h / 24)}d`;
 };
 
-/* ── Sistema de notificaciones ──────────────────────────────────────── */
-const buildNotifItems = () => {
-  const items = [];
-  const now   = Date.now();
-  try {
-    Data.ingresos.getAll().forEach(i => {
-      const ts = new Date(i.createdAt || i.fecha || 0).getTime();
-      if (!ts) return;
-      const monto = 'S/ ' + parseFloat(i.monto || 0).toFixed(2);
-      items.push({ ts, type: 'pago',    title: `Pago registrado — ${monto}`,                 sub: Data.clienteNombre(i.clienteId) });
-    });
-  } catch(e) {}
-  try {
-    Data.reservas.getAll().forEach(r => {
-      const ts = new Date(r.createdAt || 0).getTime();
-      if (!ts) return;
-      items.push({ ts, type: 'reserva', title: `Nueva reserva — ${Data.reservaCodigo(r.id)}`, sub: Data.clienteNombre(r.clienteId) });
-    });
-  } catch(e) {}
-  try {
-    const en7 = now + 7 * 86400000;
-    Data.eventos.getAll().forEach(e => {
-      const fechaTs = new Date(e.fecha || 0).getTime();
-      if (!fechaTs || fechaTs < now || fechaTs > en7) return;
-      const d = Math.ceil((fechaTs - now) / 86400000);
-      const ts = new Date(e.createdAt || e.fecha || 0).getTime();
-      items.push({ ts, type: 'evento',  title: `Evento próximo — ${e.nombre}`,                sub: d < 1 ? 'Hoy' : d === 1 ? 'Mañana' : `En ${d} días` });
-    });
-  } catch(e) {}
-  return items.sort((a, b) => b.ts - a.ts).slice(0, 15);
+let _servicesPromise = null;
+const getServices = () => {
+  if (!_servicesPromise) {
+    _servicesPromise = Promise.all([
+      import('./services/clientesService.js'),
+      import('./services/eventosService.js'),
+      import('./services/reservasService.js'),
+      import('./services/ingresosService.js'),
+      import('./services/proveedoresService.js'),
+      import('./services/notificacionesService.js'),
+    ]).then(([clientesService, eventosService, reservasService, ingresosService, proveedoresService, notificacionesService]) => ({
+      clientesService,
+      eventosService,
+      reservasService,
+      ingresosService,
+      proveedoresService,
+      notificacionesService,
+    }));
+  }
+  return _servicesPromise;
 };
 
-const renderNotifDropdown = () => {
+/* ── Sistema de notificaciones ──────────────────────────────────────── */
+let _notifItems = [];
+
+const _notifHref = (n) => {
+  if (n.boleta_id || n.ingreso_id) return 'ingresos.html';
+  if (n.reserva_id) return 'reservas.html';
+  if (n.evento_id) return 'eventos.html';
+  if (n.cliente_id) return 'clientes.html';
+  return 'dashboard.html';
+};
+
+const cargarNotifItems = async () => {
+  const { notificacionesService } = await getServices();
+  const { data, error } = await notificacionesService.getAll();
+  if (error) {
+    console.warn('[app] No se pudieron cargar notificaciones:', error);
+    return [];
+  }
+  return data || [];
+};
+
+const renderNotifDropdown = async () => {
   const list = document.getElementById('notifList');
   const dot  = document.getElementById('notifDot');
   if (!list) return;
-  const lastRead = Storage.get('ep:notif:lastRead', 0);
-  const items    = buildNotifItems();
-  const unread   = items.filter(i => i.ts > lastRead).length;
+  const { notificacionesService } = await getServices();
+  _notifItems = await cargarNotifItems();
+  const unread = _notifItems.filter(i => !i.leido).length;
   if (dot) dot.style.display = unread > 0 ? '' : 'none';
-  if (!items.length) {
+  if (!_notifItems.length) {
     list.innerHTML = '<div class="notif-empty">Sin notificaciones recientes</div>';
     return;
   }
-  list.innerHTML = items.map(i => {
-    const isNew = i.ts > lastRead;
-    return `<div class="notif-item${isNew ? ' notif-item--new' : ''}">
-      <div class="notif-item__icon notif-item__icon--${i.type}">${i.type==='pago' ? '💰' : i.type==='reserva' ? '📋' : '📅'}</div>
+  list.innerHTML = _notifItems.map(i => {
+    const ts = new Date(i.created_at).getTime();
+    return `<a href="${_notifHref(i)}" class="notif-item${!i.leido ? ' notif-item--new' : ''}" data-notif-id="${i.id}" style="text-decoration:none;color:inherit">
+      <div class="notif-item__icon notif-item__icon--${escHtml(i.tipo || 'info')}">${notificacionesService.iconoPorTipo(i.tipo)}</div>
       <div class="notif-item__body">
-        <div class="notif-item__title">${escHtml(i.title)}</div>
-        ${i.sub ? `<div class="notif-item__sub">${escHtml(i.sub)}</div>` : ''}
-        <div class="notif-item__time">${_timeAgo(i.ts)}</div>
+        <div class="notif-item__title">${escHtml(i.titulo)}</div>
+        <div class="notif-item__time">${_timeAgo(ts)}</div>
       </div>
-    </div>`;
+    </a>`;
   }).join('');
+
+  list.querySelectorAll('[data-notif-id]').forEach(el => {
+    el.addEventListener('click', async () => {
+      const id = Number(el.dataset.notifId);
+      const item = _notifItems.find(n => Number(n.id) === id);
+      if (item && !item.leido) await notificacionesService.marcarLeida(id);
+    });
+  });
 };
 
 const initNotifDropdown = () => {
@@ -248,15 +266,23 @@ const initNotifDropdown = () => {
     if (wrapper.classList.contains('notif-wrapper--open')) renderNotifDropdown();
   });
 
-  markAll?.addEventListener('click', e => {
+  markAll?.addEventListener('click', async e => {
     e.stopPropagation();
-    Storage.set('ep:notif:lastRead', Date.now());
+    const { notificacionesService } = await getServices();
+    await notificacionesService.marcarTodasLeidas();
     renderNotifDropdown();
   });
 
   document.addEventListener('click', e => {
     if (!wrapper.contains(e.target)) wrapper.classList.remove('notif-wrapper--open');
   });
+
+  getServices().then(async ({ notificacionesService }) => {
+    const canal = await notificacionesService.suscribir(() => renderNotifDropdown());
+    if (canal) window.addEventListener('beforeunload', () => {
+      import('./supabaseClient.js').then(({ supabase }) => supabase.removeChannel(canal));
+    });
+  }).catch(err => console.warn('[app] No se pudo activar realtime de notificaciones:', err));
 };
 
 /* ── Búsqueda global ─────────────────────────────────────────────────── */
@@ -270,22 +296,31 @@ const initGlobalSearch = () => {
   dd.id = 'searchDropdown';
   wrap.appendChild(dd);
 
-  const run = () => {
+  let searchSeq = 0;
+  const run = async () => {
     const q = input.value.trim().toLowerCase();
     if (q.length < 2) { dd.classList.remove('search-dropdown--open'); return; }
+    const seq = ++searchSeq;
     const results = [];
-    try { Data.clientes.getAll().filter(c =>
-      c.nombre.toLowerCase().includes(q) || (c.email||'').toLowerCase().includes(q)
-    ).slice(0,4).forEach(c => results.push({ label:c.nombre, sub:c.email, href:'clientes.html', icon:'👤' })); } catch(e){}
-    try { Data.eventos.getAll().filter(e =>
-      e.nombre.toLowerCase().includes(q)
-    ).slice(0,3).forEach(e => results.push({ label:e.nombre, sub:e.fecha||'', href:'eventos.html', icon:'📅' })); } catch(e){}
-    try { Data.reservas.getAll().filter(r =>
-      (r.codigo||'').toLowerCase().includes(q) || (Data.clienteNombre(r.clienteId)||'').toLowerCase().includes(q)
-    ).slice(0,3).forEach(r => results.push({ label:Data.reservaCodigo(r.id)||('Reserva #'+r.id), sub:Data.clienteNombre(r.clienteId), href:'reservas.html', icon:'📋' })); } catch(e){}
-    try { Data.proveedores.getAll().filter(p =>
-      p.nombre.toLowerCase().includes(q)
-    ).slice(0,3).forEach(p => results.push({ label:p.nombre, sub:p.servicio||'', href:'proveedores.html', icon:'🏢' })); } catch(e){}
+    try {
+      const { clientesService, eventosService, reservasService, ingresosService, proveedoresService } = await getServices();
+      const [clientes, eventos, reservas, ingresos, proveedores] = await Promise.all([
+        clientesService.buscar(q),
+        eventosService.buscar(q),
+        reservasService.buscar(q),
+        ingresosService.buscar(q),
+        proveedoresService.buscar(q),
+      ]);
+      if (seq !== searchSeq) return;
+
+      (clientes.data || []).slice(0,4).forEach(c => results.push({ label:c.nombre, sub:c.email, href:'clientes.html', icon:'👤' }));
+      (eventos.data || []).slice(0,3).forEach(e => results.push({ label:e.nombre, sub:e.fecha || '', href:'eventos.html', icon:'📅' }));
+      (reservas.data || []).slice(0,3).forEach(r => results.push({ label:r.codigo || ('Reserva #'+r.id), sub:r.cliente?.nombre || '', href:'reservas.html', icon:'📋' }));
+      (ingresos.data || []).slice(0,3).forEach(i => results.push({ label:i.codigo || ('Ingreso #'+i.id), sub:i.cliente?.nombre || i.concepto || '', href:'ingresos.html', icon:'💰' }));
+      (proveedores.data || []).slice(0,3).forEach(p => results.push({ label:p.nombre, sub:p.tipo || '', href:'proveedores.html', icon:'🏢' }));
+    } catch(e) {
+      console.warn('[app] Error en búsqueda global:', e);
+    }
     if (!results.length) {
       dd.innerHTML = `<div class="search-no-results">Sin resultados para "<strong>${escHtml(q)}</strong>"</div>`;
     } else {
@@ -299,7 +334,11 @@ const initGlobalSearch = () => {
     dd.classList.add('search-dropdown--open');
   };
 
-  input.addEventListener('input', run);
+  let timer = null;
+  input.addEventListener('input', () => {
+    clearTimeout(timer);
+    timer = setTimeout(run, 220);
+  });
   input.addEventListener('keydown', e => {
     if (e.key === 'Escape') { dd.classList.remove('search-dropdown--open'); input.value = ''; }
   });
@@ -360,12 +399,6 @@ const initMobileNav = () => {
 (() => {
   if (!Auth.require()) return; // Redirige a login.html si no hay sesión
 
-  // MIGRACIÓN: Data.init() desactivado — ya no se siembran datos demo en
-  // localStorage. Los módulos migrados leen desde Supabase via js/services/.
-  // Los módulos aún no migrados seguirán funcionando con sus datos locales
-  // existentes hasta que se migre cada página individualmente.
-  // Data.init(); // ← DESACTIVADO — ver js/services/ para la nueva capa de datos
-
   injectLayout();
   initSidebarToggle();
   initMobileNav();
@@ -373,8 +406,7 @@ const initMobileNav = () => {
   initNotifDropdown();
   initGlobalSearch();
 
-  /* Repinta el logo del sidebar si cambia en configuración (misma pestaña
-     u otra recién sincronizada desde Firestore) sin recargar la página. */
+  /* Repinta el logo del sidebar si cambia en configuración sin recargar. */
   AppLogo.onChange(() => {
     const aside = document.getElementById('sidebar');
     if (!aside) return;
