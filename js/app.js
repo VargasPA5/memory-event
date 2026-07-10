@@ -391,8 +391,12 @@ const initMobileNav = () => {
   const hamburger = document.getElementById('hamburger');
   if (!sidebar || !hamburger) return;
 
-  const open  = () => { sidebar.classList.add('open'); overlay?.classList.add('open'); };
-  const close = () => { sidebar.classList.remove('open'); overlay?.classList.remove('open'); };
+  // Sin esto, el body de fondo sigue pudiendo hacer scroll mientras el menú
+  // está abierto en celular: el gesto táctil se lo "roba" el fondo en vez
+  // de desplazar el menú, sobre todo en Android/Chrome — ahí es donde se
+  // siente como que "no se puede hacer scroll en el menú".
+  const open  = () => { sidebar.classList.add('open'); overlay?.classList.add('open'); document.body.classList.add('no-scroll'); };
+  const close = () => { sidebar.classList.remove('open'); overlay?.classList.remove('open'); document.body.classList.remove('no-scroll'); };
 
   hamburger.addEventListener('click', () => sidebar.classList.contains('open') ? close() : open());
   overlay?.addEventListener('click', close);

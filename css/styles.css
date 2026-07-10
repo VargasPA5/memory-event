@@ -1146,6 +1146,11 @@ img { display: block; max-width: 100%; }
 @media (max-width: 1024px) {
   .kpi-grid { grid-template-columns: repeat(3,1fr); }
 }
+/* Bloquea el scroll del fondo mientras el menú móvil está abierto (ver
+   initMobileNav en js/app.js) — así el gesto táctil siempre desplaza el
+   menú y no la página detrás de él. */
+body.no-scroll { overflow: hidden; height: 100dvh; }
+
 @media (max-width: 768px) {
   .sidebar {
     position: fixed;
