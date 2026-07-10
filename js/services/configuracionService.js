@@ -15,7 +15,7 @@ const CAMPOS_EDITABLES = [
 ];
 
 const LOGO_BUCKET = 'business';
-const MAX_LOGO_MB = 5;
+const MAX_LOGO_MB = 10;
 const TIPOS_LOGO_PERMITIDOS = ['image/jpeg', 'image/png', 'image/webp'];
 
 const _err = (error, contexto) => {
