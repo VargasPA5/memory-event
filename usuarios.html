@@ -275,7 +275,17 @@ async function guardarUsuario() {
   btn.textContent = textoBtn;
 
   if (error) {
-    Toast.error('No se pudo invitar al usuario: ' + error.message);
+    // error.message de supabase-js suele ser genérico ("non-2xx status
+    // code"); el mensaje real que arma nuestra función va en el cuerpo de
+    // la respuesta, disponible en error.context.
+    let mensaje = error.message;
+    if (error.context && typeof error.context.json === 'function') {
+      try {
+        const cuerpo = await error.context.clone().json();
+        if (cuerpo?.error) mensaje = cuerpo.error;
+      } catch { /* el cuerpo no era JSON, se mantiene el mensaje genérico */ }
+    }
+    Toast.error('No se pudo invitar al usuario: ' + mensaje);
     return;
   }
 

@@ -44,26 +44,32 @@
   /* ── Hero ────────────────────────────────────────────────────────── */
   .pf-hero {
     background:linear-gradient(160deg,#100f0d 0%,#1a1814 60%,#0d0c0a 100%);
-    color:#fff; padding:100px 32px 120px; text-align:center; position:relative; overflow:hidden;
+    color:#fff; padding:64px 24px 82px; position:relative; overflow:hidden;
   }
-  .pf-hero::before { content:'';position:absolute;top:-140px;left:-140px;width:500px;height:500px;border-radius:50%;background:radial-gradient(circle,rgba(201,163,90,.22) 0%,transparent 70%); pointer-events:none; }
-  .pf-hero::after  { content:'';position:absolute;bottom:-120px;right:-120px;width:420px;height:420px;border-radius:50%;background:radial-gradient(circle,rgba(179,137,63,.16) 0%,transparent 70%); pointer-events:none; }
-  .pf-hero-inner { position:relative; z-index:1; max-width:780px; margin:0 auto; }
+  .pf-hero-inner {
+    position:relative; z-index:1; max-width:1200px; margin:0 auto;
+    display:grid; grid-template-columns:minmax(0,1fr) minmax(420px,1fr);
+    gap:70px; align-items:center;
+  }
+  .pf-hero-copy { max-width:620px; }
 
   .pf-hero-badge {
     display:inline-flex; align-items:center; gap:7px;
     background:rgba(201,163,90,.15); border:1px solid rgba(201,163,90,.35);
-    color:#d4b77a; font-size:12px; font-weight:600; letter-spacing:.06em; text-transform:uppercase;
-    padding:6px 16px; border-radius:9999px; margin-bottom:24px;
+    color:#d4b77a; font-size:13px; font-weight:600; letter-spacing:0;
+    padding:9px 18px; border-radius:9999px; margin-bottom:32px;
+    box-shadow:0 1px 1px rgba(14,23,36,.03);
   }
-  .pf-hero-badge span { width:6px; height:6px; border-radius:50%; background:#c9a35a; display:inline-block; animation:pulse-dot 2s ease-in-out infinite; }
+  .pf-hero-badge span { width:15px; height:15px; color:#e0a734; display:inline-flex; align-items:center; justify-content:center; animation:pulse-dot 2s ease-in-out infinite; }
   @keyframes pulse-dot { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(.7)} }
 
-  .pf-hero h1 { font-size:48px; font-weight:800; line-height:1.2; margin:0 0 18px; letter-spacing:-.5px; }
-  .pf-hero h1 em { font-style:normal; color:#d4b77a; }
-  .pf-hero p { font-size:16px; color:rgba(255,255,255,.65); line-height:1.75; margin:0 auto 36px; max-width:560px; }
+  .pf-hero h1 {
+    font-family:Georgia,'Times New Roman',serif; font-size:64px; font-weight:500;
+    line-height:.98; margin:0 0 26px; letter-spacing:-.02em; color:#fff;
+  }
+  .pf-hero h1 em { font-style:normal; color:inherit; }
+  .pf-hero p { font-size:19px; color:rgba(255,255,255,.70); line-height:1.62; margin:0 0 34px; max-width:590px; }
 
-  .pf-hero-ctas { display:flex; justify-content:center; align-items:center; gap:14px; flex-wrap:wrap; }
   .pf-cta-primary {
     display:inline-flex; align-items:center; gap:8px;
     background:linear-gradient(135deg,#d9b978,#b3893f); color:#1a1917;
@@ -73,22 +79,52 @@
   }
   .pf-cta-primary:hover { opacity:.92; transform:translateY(-1px); }
   .pf-cta-primary svg { width:17px; height:17px; }
-  .pf-cta-ghost {
-    display:inline-flex; align-items:center; gap:8px;
-    background:rgba(255,255,255,.08); border:1.5px solid rgba(255,255,255,.25);
-    backdrop-filter:blur(8px); color:rgba(255,255,255,.85);
-    padding:12px 24px; border-radius:9999px; font-weight:600; font-size:14px;
-    text-decoration:none; transition:background .15s, border-color .15s;
-  }
-  .pf-cta-ghost:hover { background:rgba(255,255,255,.14); border-color:rgba(255,255,255,.4); }
-  .pf-cta-ghost svg { width:16px; height:16px; }
 
-  .pf-hero-stats { display:flex; justify-content:center; gap:0; flex-wrap:wrap; margin-top:56px; }
-  .pf-hero-stat { padding:0 36px; text-align:center; }
-  .pf-hero-stat + .pf-hero-stat { border-left:1px solid rgba(255,255,255,.12); }
-  .pf-stat-num { font-size:32px; font-weight:800; color:#d4b77a; letter-spacing:-.5px; }
-  .pf-stat-label { font-size:12px; color:rgba(255,255,255,.45); margin-top:4px; letter-spacing:.02em; }
-  @media (max-width:600px) { .pf-hero h1 { font-size:32px; } .pf-hero-stat { padding:12px 24px; } .pf-hero-stat + .pf-hero-stat { border-left:none; border-top:1px solid rgba(255,255,255,.12); } }
+  .pf-hero-proof { display:flex; align-items:center; gap:8px; color:rgba(255,255,255,.62); font-size:15px; margin-top:30px; }
+  .pf-hero-proof svg { width:17px; height:17px; color:#d5a23b; }
+  .pf-hero-stats { display:flex; gap:22px; flex-wrap:wrap; margin-top:34px; }
+  .pf-hero-stat { padding:0; text-align:left; }
+  .pf-stat-num { font-size:25px; font-weight:800; color:#d4b77a; letter-spacing:-.01em; }
+  .pf-stat-label { font-size:12px; color:rgba(255,255,255,.48); margin-top:3px; letter-spacing:.02em; }
+
+  .pf-hero-carousel {
+    position:relative; aspect-ratio:1.18/1; min-height:380px; border-radius:18px;
+    overflow:hidden; box-shadow:0 24px 60px rgba(28,35,48,.18);
+    background:#141414;
+  }
+  .pf-hero-slide {
+    position:absolute; inset:0; opacity:0; transform:scale(1.025);
+    transition:opacity .55s ease, transform .75s ease;
+  }
+  .pf-hero-slide.is-active { opacity:1; transform:scale(1); }
+  .pf-hero-slide img { width:100%; height:100%; object-fit:cover; display:block; }
+  .pf-hero-slide::after {
+    content:''; position:absolute; inset:0;
+    background:linear-gradient(0deg,rgba(90,50,5,.24),rgba(80,42,0,.12));
+    pointer-events:none;
+  }
+  .pf-carousel-dots {
+    position:absolute; left:50%; bottom:16px; transform:translateX(-50%);
+    display:flex; gap:7px; align-items:center; z-index:3;
+  }
+  .pf-carousel-dot {
+    width:10px; height:10px; border-radius:9999px; border:1px solid rgba(255,255,255,.9);
+    background:rgba(255,255,255,.72); padding:0; cursor:pointer; transition:width .2s, background .2s;
+  }
+  .pf-carousel-dot.is-active { width:28px; background:#e4b84d; border-color:#e4b84d; }
+  @media (max-width:980px) {
+    .pf-hero-inner { grid-template-columns:1fr; gap:42px; }
+    .pf-hero-copy { max-width:760px; }
+    .pf-hero h1 { font-size:54px; }
+    .pf-hero-carousel { min-height:330px; }
+  }
+  @media (max-width:600px) {
+    .pf-hero { padding:48px 18px 64px; }
+    .pf-hero h1 { font-size:42px; }
+    .pf-hero p { font-size:16px; }
+    .pf-hero-carousel { min-height:260px; border-radius:14px; }
+    .pf-cta-primary { width:100%; justify-content:center; }
+  }
 
   /* ── Secciones genéricas ─────────────────────────────────────────── */
   .pf-section { max-width:1080px; margin:0 auto; padding:80px 32px; }
@@ -271,33 +307,50 @@
 <!-- ── Hero ────────────────────────────────────────────────────────── -->
 <header class="pf-hero">
   <div class="pf-hero-inner">
-    <div class="pf-hero-badge">
-      <span></span>Nueva Cajamarca · Especialistas en eventos
-    </div>
-    <h1>Tu evento, tu historia,<br/><em>tu recuerdo</em></h1>
-    <p>Planificamos y coordinamos bodas, cumpleaños, graduaciones y eventos corporativos para que tú solo disfrutes. Desde la primera reunión hasta el último brindis, cuidamos cada detalle.</p>
-    <div class="pf-hero-ctas">
-      <a href="#contacto" class="pf-cta-primary">
-        <svg viewBox="0 0 20 20" fill="currentColor"><path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z"/></svg>
-        Contáctanos hoy
-      </a>
-      <a href="#galeria" class="pf-cta-ghost">
-        <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clip-rule="evenodd"/></svg>
-        Ver galería
-      </a>
-    </div>
-    <div class="pf-hero-stats">
-      <div class="pf-hero-stat">
-        <div class="pf-stat-num" id="stNum1">+150</div>
-        <div class="pf-stat-label">Eventos realizados</div>
+    <div class="pf-hero-copy">
+      <div class="pf-hero-badge">
+        <span>✦</span>Nueva Cajamarca · Especialistas en eventos
       </div>
-      <div class="pf-hero-stat">
-        <div class="pf-stat-num" id="stNum2">+98%</div>
-        <div class="pf-stat-label">Clientes satisfechos</div>
+      <h1>Tu evento, tu historia,<br/><em>tu recuerdo</em></h1>
+      <p>Planificamos y coordinamos bodas, cumpleaños, graduaciones y eventos corporativos para que tú solo disfrutes. Desde la primera reunión hasta el último brindis, cuidamos cada detalle.</p>
+      <div class="pf-hero-proof">
+        <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 2.25c.247 0 .49.061.707.177l5.25 2.8c.49.262.793.773.793 1.328v3.942c0 3.26-2.018 6.18-5.07 7.33l-1.15.432a1.5 1.5 0 01-1.06 0l-1.15-.433a7.822 7.822 0 01-5.07-7.329V6.555c0-.555.304-1.066.793-1.327l5.25-2.8c.216-.117.46-.178.707-.178zm3.78 6.53a.75.75 0 00-1.06-1.06L9.25 11.19 7.78 9.72a.75.75 0 00-1.06 1.06l2 2a.75.75 0 001.06 0l4-4z" clip-rule="evenodd"/></svg>
+        Proveedores verificados
       </div>
-      <div class="pf-hero-stat">
-        <div class="pf-stat-num" id="stNum3">+5</div>
-        <div class="pf-stat-label">Años de experiencia</div>
+      <div class="pf-hero-stats">
+        <div class="pf-hero-stat">
+          <div class="pf-stat-num" id="stNum1">+150</div>
+          <div class="pf-stat-label">Eventos realizados</div>
+        </div>
+        <div class="pf-hero-stat">
+          <div class="pf-stat-num" id="stNum2">+98%</div>
+          <div class="pf-stat-label">Clientes satisfechos</div>
+        </div>
+        <div class="pf-hero-stat">
+          <div class="pf-stat-num" id="stNum3">+5</div>
+          <div class="pf-stat-label">Años de experiencia</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="pf-hero-carousel" aria-label="Galería destacada de eventos">
+      <div class="pf-hero-slide is-active">
+        <img src="https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&w=980&q=82" alt="Mesa elegante preparada para una boda"/>
+      </div>
+      <div class="pf-hero-slide">
+        <img src="https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?auto=format&fit=crop&w=980&q=82" alt="Salón decorado con luces para evento"/>
+      </div>
+      <div class="pf-hero-slide">
+        <img src="https://images.unsplash.com/photo-1527529482837-4698179dc6ce?auto=format&fit=crop&w=980&q=82" alt="Celebración con decoración cálida"/>
+      </div>
+      <div class="pf-hero-slide">
+        <img src="https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&w=980&q=82" alt="Decoración de evento con mesa de recepción"/>
+      </div>
+      <div class="pf-carousel-dots" aria-label="Cambiar imagen del carrusel">
+        <button class="pf-carousel-dot is-active" type="button" aria-label="Ver imagen 1"></button>
+        <button class="pf-carousel-dot" type="button" aria-label="Ver imagen 2"></button>
+        <button class="pf-carousel-dot" type="button" aria-label="Ver imagen 3"></button>
+        <button class="pf-carousel-dot" type="button" aria-label="Ver imagen 4"></button>
       </div>
     </div>
   </div>
@@ -538,6 +591,32 @@
 document.getElementById('pfYear').textContent = new Date().getFullYear();
 AppLogo.paintInto('.pf-brand-icon');
 AppLogo.onChange(() => AppLogo.paintInto('.pf-brand-icon'));
+
+const carouselSlides = [...document.querySelectorAll('.pf-hero-slide')];
+const carouselDots = [...document.querySelectorAll('.pf-carousel-dot')];
+let carouselIndex = 0;
+let carouselTimer = null;
+
+function showHeroSlide(index) {
+  if (!carouselSlides.length) return;
+  carouselIndex = (index + carouselSlides.length) % carouselSlides.length;
+  carouselSlides.forEach((slide, i) => slide.classList.toggle('is-active', i === carouselIndex));
+  carouselDots.forEach((dot, i) => dot.classList.toggle('is-active', i === carouselIndex));
+}
+
+function startHeroCarousel() {
+  if (carouselSlides.length < 2) return;
+  clearInterval(carouselTimer);
+  carouselTimer = setInterval(() => showHeroSlide(carouselIndex + 1), 4200);
+}
+
+carouselDots.forEach((dot, i) => {
+  dot.addEventListener('click', () => {
+    showHeroSlide(i);
+    startHeroCarousel();
+  });
+});
+startHeroCarousel();
 
 // Animated counters triggered when stats enter the viewport
 function animateCounter(el, target, prefix, suffix, duration) {
