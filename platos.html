@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Memory – Platos</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Dancing+Script:wght@700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="css/styles.css"/>
+  <script src="js/theme.js"></script>
+  <script src="js/logo.js"></script>
+</head>
+<body>
+<div class="layout">
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+  <main class="main" id="main">
+    <div class="page-wrapper">
+
+      <div class="page-header">
+        <div><h1>Platos</h1><p>Administra el catálogo de alimentos disponible para eventos.</p></div>
+        <div class="page-actions">
+          <button class="btn btn--outline" onclick="exportarCSV()">
+            <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+            Exportar
+          </button>
+          <button class="btn btn--primary" onclick="abrirModal()">
+            <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/></svg>
+            Nuevo Plato
+          </button>
+        </div>
+      </div>
+
+      <div class="kpi-grid" style="grid-template-columns:repeat(4,1fr)">
+        <div class="kpi-card">
+          <div class="kpi-top"><div class="kpi-icon kpi-icon--blue"><svg viewBox="0 0 20 20" fill="currentColor"><path d="M4 3a2 2 0 00-2 2v2a6 6 0 006 6h4a6 6 0 006-6V5a2 2 0 00-2-2H4z"/><path d="M7 14a1 1 0 000 2h6a1 1 0 100-2H7z"/></svg></div></div>
+          <div class="kpi-bottom"><div class="kpi-value" id="kTotal">—</div><div class="kpi-label">Total Platos</div></div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-top"><div class="kpi-icon kpi-icon--green"><svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg></div></div>
+          <div class="kpi-bottom"><div class="kpi-value" id="kActivos">—</div><div class="kpi-label">Activos</div></div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-top"><div class="kpi-icon kpi-icon--red"><svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/></svg></div></div>
+          <div class="kpi-bottom"><div class="kpi-value" id="kInactivos">—</div><div class="kpi-label">Inactivos</div></div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-top"><div class="kpi-icon kpi-icon--purple"><svg viewBox="0 0 20 20" fill="currentColor"><path d="M4 4a2 2 0 012-2h8a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V4z"/><path fill-rule="evenodd" d="M3 10a1 1 0 011-1h12a1 1 0 011 1v4a4 4 0 01-4 4H7a4 4 0 01-4-4v-4z" clip-rule="evenodd"/></svg></div></div>
+          <div class="kpi-bottom"><div class="kpi-value" id="kCategorias">—</div><div class="kpi-label">Categorías</div></div>
+        </div>
+      </div>
+
+      <div class="toolbar">
+        <div class="search-box">
+          <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd"/></svg>
+          <input type="text" id="searchInput" placeholder="Buscar plato…" oninput="renderTabla()"/>
+        </div>
+        <select class="filter-select" id="filtroCategoria" onchange="renderTabla()">
+          <option value="">Todas las categorías</option>
+        </select>
+        <select class="filter-select" id="filtroEstado" onchange="renderTabla()">
+          <option value="">Todos los estados</option>
+          <option>Activo</option><option>Inactivo</option>
+        </select>
+      </div>
+
+      <div class="tbl-wrap">
+        <table class="tbl">
+          <thead>
+            <tr><th>Plato</th><th>Categoría</th><th>Descripción</th><th>Precio ref.</th><th>Estado</th><th>Actualizado</th><th>Acciones</th></tr>
+          </thead>
+          <tbody id="tablaBody"></tbody>
+        </table>
+        <div class="tbl-pagination">
+          <span id="paginacionInfo">—</span>
+          <div class="pag-btns"><button class="pag-btn active">1</button></div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modalTitulo">Nuevo Plato</h3>
+      <button class="modal-close" onclick="cerrarModal()">✕</button>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Nombre *</label><input type="text" class="form-input" id="fNombre" placeholder="Nombre del plato"/></div>
+      <div class="form-group"><label>Categoría</label><select class="form-select" id="fCategoria"></select></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Precio referencial (S/)</label><input type="number" class="form-input" id="fPrecio" placeholder="0.00" min="0" step="0.01"/></div>
+      <div class="form-group"><label>Estado</label><select class="form-select" id="fEstado"><option>Activo</option><option>Inactivo</option></select></div>
+    </div>
+    <div class="form-group"><label>Descripción</label><textarea class="form-input form-textarea" id="fDescripcion" rows="3" placeholder="Ingredientes, presentación o notas internas…"></textarea></div>
+    <div class="modal-footer">
+      <button class="btn btn--outline" onclick="cerrarModal()">Cancelar</button>
+      <button class="btn btn--primary" onclick="guardarPlato()">Guardar Plato</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+<script src="js/storage.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/app.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script type="module">
+import * as platosService from './js/services/platosService.js';
+
+const CATEGORIAS = ['Entrada','Plato principal','Postre','Bebida','Otros'];
+
+let editandoId = null;
+let todosLosPlatos = [];
+
+window.renderTabla = renderTabla;
+window.exportarCSV = exportarCSV;
+window.abrirModal = abrirModal;
+window.cerrarModal = cerrarModal;
+window.guardarPlato = guardarPlato;
+window.editarPlato = editarPlato;
+window.cambiarEstadoPlato = cambiarEstadoPlato;
+window.pedirEliminar = pedirEliminar;
+
+function poblarCategorias() {
+  const filtro = document.getElementById('filtroCategoria');
+  const campo = document.getElementById('fCategoria');
+  filtro.innerHTML = '<option value="">Todas las categorías</option>';
+  campo.innerHTML = '';
+  CATEGORIAS.forEach(c => {
+    const of = document.createElement('option'); of.value = c; of.textContent = c; filtro.appendChild(of);
+    const oc = document.createElement('option'); oc.value = c; oc.textContent = c; campo.appendChild(oc);
+  });
+}
+
+function renderTabla() {
+  const txt = (document.getElementById('searchInput').value || '').toLowerCase();
+  const categoria = document.getElementById('filtroCategoria').value;
+  const estado = document.getElementById('filtroEstado').value;
+  const tbody = document.getElementById('tablaBody');
+
+  const filtrados = todosLosPlatos.filter(p => {
+    const texto = `${p.nombre || ''} ${p.categoria || ''} ${p.descripcion || ''}`.toLowerCase();
+    return texto.includes(txt)
+      && (!categoria || p.categoria === categoria)
+      && (!estado || p.estado === estado);
+  });
+
+  document.getElementById('kTotal').textContent = todosLosPlatos.length;
+  document.getElementById('kActivos').textContent = todosLosPlatos.filter(p => p.estado === 'Activo').length;
+  document.getElementById('kInactivos').textContent = todosLosPlatos.filter(p => p.estado === 'Inactivo').length;
+  document.getElementById('kCategorias').textContent = new Set(todosLosPlatos.map(p => p.categoria)).size;
+  document.getElementById('paginacionInfo').textContent = `Mostrando ${filtrados.length} de ${todosLosPlatos.length} platos`;
+
+  tbody.innerHTML = '';
+  if (!filtrados.length) { tbody.innerHTML = emptyState('No se encontraron platos.'); return; }
+
+  filtrados.forEach(p => {
+    const nuevoEstado = p.estado === 'Activo' ? 'Inactivo' : 'Activo';
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><div class="client-cell">${avatarEl(p.nombre, p.id)}<strong class="p-nombre"></strong></div></td>
+      <td>${badge(p.categoria)}</td>
+      <td class="p-desc" style="max-width:280px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></td>
+      <td><strong>${Fmt.currency(p.precio_referencial)}</strong></td>
+      <td>${badge(p.estado)}</td>
+      <td>${Fmt.date(p.updated_at || p.created_at)}</td>
+      <td>
+        <div class="actions">
+          <button class="action-btn" title="Editar" onclick="editarPlato(${p.id})">
+            <svg viewBox="0 0 20 20" fill="currentColor"><path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/></svg>
+          </button>
+          <button class="action-btn" title="${nuevoEstado === 'Activo' ? 'Activar' : 'Desactivar'}" onclick="cambiarEstadoPlato(${p.id}, '${nuevoEstado}')">
+            <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+          </button>
+          <button class="action-btn delete" title="Eliminar" onclick="pedirEliminar(${p.id})">
+            <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+          </button>
+        </div>
+      </td>`;
+    tr.querySelector('.p-nombre').textContent = p.nombre;
+    tr.querySelector('.p-desc').textContent = p.descripcion || '—';
+    tbody.appendChild(tr);
+  });
+}
+
+function abrirModal() {
+  editandoId = null;
+  document.getElementById('modalTitulo').textContent = 'Nuevo Plato';
+  limpiarForm();
+  document.getElementById('modalOverlay').classList.add('modal-overlay--open');
+  setTimeout(() => document.getElementById('fNombre').focus(), 50);
+}
+
+function cerrarModal() { document.getElementById('modalOverlay').classList.remove('modal-overlay--open'); }
+document.getElementById('modalOverlay').addEventListener('click', e => { if (e.target.id === 'modalOverlay') cerrarModal(); });
+
+function limpiarForm() {
+  ['fNombre','fPrecio','fDescripcion'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('fCategoria').value = 'Otros';
+  document.getElementById('fEstado').value = 'Activo';
+}
+
+async function guardarPlato() {
+  const nombre = document.getElementById('fNombre').value.trim();
+  const categoria = document.getElementById('fCategoria').value;
+  const precio_referencial = document.getElementById('fPrecio').value;
+  const estado = document.getElementById('fEstado').value;
+  const descripcion = document.getElementById('fDescripcion').value.trim();
+
+  if (!nombre) { Toast.error('El nombre es obligatorio'); return; }
+  if (precio_referencial !== '' && Number(precio_referencial) < 0) { Toast.error('El precio no puede ser negativo'); return; }
+
+  const duplicado = todosLosPlatos.find(p => p.nombre.toLowerCase() === nombre.toLowerCase() && p.id !== editandoId);
+  if (duplicado) { Toast.error('Ya existe un plato con ese nombre'); return; }
+
+  const payload = { nombre, categoria, precio_referencial, estado, descripcion };
+  const res = editandoId !== null
+    ? await platosService.actualizar(editandoId, payload)
+    : await platosService.crear(payload);
+
+  if (res.error) { Toast.error('Error al guardar plato: ' + res.error); return; }
+  Toast.success(editandoId ? 'Plato actualizado ✓' : 'Plato guardado ✓');
+  cerrarModal();
+  await cargarDatos();
+}
+
+async function editarPlato(id) {
+  const { data: p, error } = await platosService.getById(id);
+  if (error) { Toast.error('Error al cargar plato'); return; }
+  if (!p) return;
+  editandoId = id;
+  document.getElementById('modalTitulo').textContent = 'Editar Plato';
+  document.getElementById('fNombre').value = p.nombre || '';
+  document.getElementById('fCategoria').value = p.categoria || 'Otros';
+  document.getElementById('fPrecio').value = p.precio_referencial ?? '';
+  document.getElementById('fEstado').value = p.estado || 'Activo';
+  document.getElementById('fDescripcion').value = p.descripcion || '';
+  document.getElementById('modalOverlay').classList.add('modal-overlay--open');
+}
+
+async function cambiarEstadoPlato(id, estado) {
+  const res = await platosService.cambiarEstado(id, estado);
+  if (res.error) { Toast.error('No se pudo cambiar el estado: ' + res.error); return; }
+  Toast.success(estado === 'Activo' ? 'Plato activado' : 'Plato desactivado');
+  await cargarDatos();
+}
+
+async function pedirEliminar(id) {
+  const ok = await Confirm({ title:'¿Eliminar plato?', message:'Si está asociado a eventos, la base de datos impedirá eliminarlo.', okText:'Sí, eliminar' });
+  if (!ok) return;
+  const res = await platosService.eliminar(id);
+  if (res.error) { Toast.error('No se pudo eliminar. Verifica permisos o asociaciones con eventos.'); return; }
+  Toast.success('Plato eliminado');
+  await cargarDatos();
+}
+
+function exportarCSV() {
+  const rows = [['ID','Nombre','Categoría','Descripción','Precio referencial','Estado','Creado','Actualizado']];
+  todosLosPlatos.forEach(p => rows.push([
+    p.id,
+    p.nombre,
+    p.categoria,
+    p.descripcion || '',
+    p.precio_referencial ?? '',
+    p.estado,
+    p.created_at,
+    p.updated_at,
+  ]));
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  XLSX.utils.book_append_sheet(wb, ws, 'Platos');
+  XLSX.writeFile(wb, 'platos.xlsx');
+  Toast.success('Excel exportado ✓');
+}
+
+async function cargarDatos() {
+  poblarCategorias();
+  const { data, error } = await platosService.getAll();
+  if (error) { Toast.error('Error al cargar platos'); return; }
+  todosLosPlatos = data || [];
+  renderTabla();
+}
+
+cargarDatos();
+</script>
+</body>
+</html>
