@@ -333,7 +333,7 @@ function renderTabla() {
       <td class="g-desc" style="max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></td>
       <td><strong style="color:var(--red)">${Fmt.currency(g.monto)}</strong></td>
       <td>${badge(g.estado)}</td>
-      <td><span class="badge badge--gray"></span></td>
+      <td><span class="badge badge--gray g-metodo"></span></td>
       <td class="g-adjunto"></td>
       <td>
         <div class="actions">
@@ -348,7 +348,7 @@ function renderTabla() {
     tr.querySelector('.g-evento').textContent = g.evento?.nombre || '—';
     tr.querySelector('.g-proveedor').textContent = proveedor;
     tr.querySelector('.g-desc').textContent = g.descripcion || '—';
-    tr.querySelector('.badge--gray').textContent = g.metodo || '—';
+    tr.querySelector('.g-metodo').textContent = g.metodo || '—';
     tr.querySelector('.g-adjunto').innerHTML = g.comprobante_url
       ? `<a class="link-sm" href="${escHtml(g.comprobante_url)}" target="_blank" rel="noopener">Ver</a>`
       : '—';
