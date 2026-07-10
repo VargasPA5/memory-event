@@ -817,20 +817,20 @@
   <div class="pf-section-title">
     <div class="eyebrow">Contacto</div>
     <h2>Hablemos de tu próximo evento</h2>
-    <p>Estamos en Nueva Cajamarca y atendemos consultas por teléfono y correo.</p>
+    <p id="publicContactIntro">Estamos en Nueva Cajamarca y atendemos consultas por teléfono y correo.</p>
   </div>
   <div class="pf-contact">
     <div class="pf-contact-card">
       <div class="pf-contact-icon"><svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"/></svg></div>
-      <div><h4>Ubicación</h4><p>Nueva Cajamarca, San Martín, Perú</p></div>
+      <div><h4>Ubicación</h4><p id="publicContactAddress">Nueva Cajamarca, San Martín, Perú</p></div>
     </div>
     <div class="pf-contact-card">
       <div class="pf-contact-icon"><svg viewBox="0 0 20 20" fill="currentColor"><path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z"/></svg></div>
-      <div><h4>Teléfono</h4><a href="tel:+51920004183">920 004 183</a></div>
+      <div><h4>Teléfono</h4><a href="tel:+51920004183" id="publicContactPhone">920 004 183</a></div>
     </div>
     <div class="pf-contact-card">
       <div class="pf-contact-icon"><svg viewBox="0 0 20 20" fill="currentColor"><path d="M2.94 6.412A2 2 0 002 8.108V14a2 2 0 002 2h12a2 2 0 002-2V8.108a2 2 0 00-.94-1.696l-6-3.75a2 2 0 00-2.12 0l-6 3.75zm2.615 2.423a1 1 0 10-1.06 1.696l4.5 2.813a2 2 0 002.12 0l4.5-2.813a1 1 0 10-1.06-1.696L10 11.648 5.555 8.835z"/></svg></div>
-      <div><h4>Correo</h4><a href="mailto:atencionalcliente@mamery.com">atencionalcliente@mamery.com</a></div>
+      <div><h4>Correo</h4><a href="mailto:atencionalcliente@mamery.com" id="publicContactEmail">atencionalcliente@mamery.com</a></div>
     </div>
     <div class="pf-contact-card">
       <div class="pf-contact-icon"><svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"/></svg></div>
@@ -865,9 +865,9 @@
     <div class="pf-footer-col">
       <h4>Contacto</h4>
       <div class="pf-footer-meta">
-        Nueva Cajamarca, San Martín, Perú<br/>
-        920 004 183<br/>
-        atencionalcliente@mamery.com
+        <span id="footerContactAddress">Nueva Cajamarca, San Martín, Perú</span><br/>
+        <span id="footerContactPhone">920 004 183</span><br/>
+        <span id="footerContactEmail">atencionalcliente@mamery.com</span>
       </div>
       <div class="pf-footer-copy">© <span id="pfYear"></span> Memory · Nueva Cajamarca, Perú</div>
     </div>
@@ -878,6 +878,40 @@
 document.getElementById('pfYear').textContent = new Date().getFullYear();
 AppLogo.paintInto('.pf-brand-icon');
 AppLogo.onChange(() => AppLogo.paintInto('.pf-brand-icon'));
+
+const setText = (id, value) => {
+  const el = document.getElementById(id);
+  if (el && value) el.textContent = value;
+};
+const setLink = (id, href, text) => {
+  const el = document.getElementById(id);
+  if (!el || !text) return;
+  el.textContent = text;
+  el.href = href;
+};
+const telHref = (phone) => `tel:${String(phone || '').replace(/[^\d+]/g, '')}`;
+
+async function syncPublicBusinessContact() {
+  try {
+    const { getConfiguracion } = await import('./js/services/configuracionService.js');
+    const { data } = await getConfiguracion();
+    if (!data) return;
+
+    setText('publicContactAddress', data.direccion);
+    setText('footerContactAddress', data.direccion);
+    setText('footerContactPhone', data.telefono);
+    setText('footerContactEmail', data.email);
+    setLink('publicContactPhone', telHref(data.telefono), data.telefono);
+    setLink('publicContactEmail', `mailto:${data.email}`, data.email);
+
+    if (data.direccion || data.telefono || data.email) {
+      document.getElementById('publicContactIntro').textContent = 'Estamos disponibles para atender tus consultas por teléfono, correo o en nuestra dirección principal.';
+    }
+  } catch {
+    /* Si la configuración pública no carga, se mantienen los datos por defecto. */
+  }
+}
+syncPublicBusinessContact();
 
 const publicAccountBtn = document.getElementById('publicAccountBtn');
 const publicAccountIcon = publicAccountBtn?.querySelector('svg');

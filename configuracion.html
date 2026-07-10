@@ -66,8 +66,6 @@
         <button class="tab-btn active" onclick="switchTab('general',this)">General</button>
         <button class="tab-btn" onclick="switchTab('empresa',this)">Empresa</button>
         <button class="tab-btn" onclick="switchTab('notif',this)">Notificaciones</button>
-        <button class="tab-btn" onclick="switchTab('seguridad',this)">Seguridad</button>
-        <button class="tab-btn" onclick="switchTab('datos',this)">Datos</button>
       </div>
 
       <div class="conf-layout">
@@ -167,69 +165,6 @@
             </div>
           </div>
 
-          <!-- TAB: SEGURIDAD -->
-          <div id="tab-seguridad" class="tab-panel conf-panel" style="display:none">
-            <div class="conf-section">
-              <div class="conf-section-title">
-                <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"/></svg>
-                Cambiar Contraseña
-              </div>
-              <div class="form-group" style="margin-bottom:14px"><label>Contraseña actual</label><input type="password" class="form-input" id="cfgPassActual" placeholder="••••••••" autocomplete="current-password"/></div>
-              <div class="form-group" style="margin-bottom:14px"><label>Nueva contraseña</label><input type="password" class="form-input" id="cfgPassNueva" placeholder="••••••••" autocomplete="new-password"/></div>
-              <div class="form-group" style="margin-bottom:14px"><label>Confirmar nueva contraseña</label><input type="password" class="form-input" id="cfgPassConfirm" placeholder="••••••••" autocomplete="new-password"/></div>
-            </div>
-            <div class="conf-section">
-              <div class="conf-section-title">
-                <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
-                Opciones de Seguridad
-              </div>
-              <div class="toggle-row"><div class="toggle-label"><h4>Sesión automática (30 min) <span class="badge-soon">Próximamente</span></h4><p>Cerrar sesión tras 30 minutos de inactividad</p></div><label class="toggle"><input type="checkbox" disabled/><span class="toggle-slider"></span></label></div>
-              <div class="toggle-row"><div class="toggle-label"><h4>Autenticación de 2 factores <span class="badge-soon">Próximamente</span></h4><p>Mayor seguridad para el acceso</p></div><label class="toggle"><input type="checkbox" disabled/><span class="toggle-slider"></span></label></div>
-            </div>
-            <div class="conf-section" style="border-bottom:none">
-              <button class="btn btn--primary" onclick="guardarSeguridad(this)">Actualizar contraseña</button>
-            </div>
-          </div>
-
-          <!-- TAB: DATOS -->
-          <div id="tab-datos" class="tab-panel conf-panel" style="display:none">
-            <div class="conf-section">
-              <div class="conf-section-title">
-                <svg viewBox="0 0 20 20" fill="currentColor"><path d="M3 12v3c0 1.657 3.134 3 7 3s7-1.343 7-3v-3c0 1.657-3.134 3-7 3s-7-1.343-7-3z"/><path d="M3 7v3c0 1.657 3.134 3 7 3s7-1.343 7-3V7c0 1.657-3.134 3-7 3S3 8.657 3 7z"/><path d="M17 5c0 1.657-3.134 3-7 3S3 6.657 3 5s3.134-3 7-3 7 1.343 7 3z"/></svg>
-                Almacenamiento
-              </div>
-              <p class="conf-note" style="margin-bottom:0">Los datos del sistema se almacenan en Supabase (PostgreSQL en la nube), con Row Level Security por rol. El logo se aloja como archivo físico en Supabase Storage.</p>
-            </div>
-            <div class="conf-section">
-              <div class="conf-section-title">
-                <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
-                Exportar e Importar <span class="badge-soon">Próximamente</span>
-              </div>
-              <p style="font-size:13px;color:var(--txt-secondary);margin-bottom:14px">La exportación e importación de respaldos completos estará disponible en una futura versión.</p>
-              <div style="display:flex;gap:10px">
-                <button class="btn btn--outline" disabled title="Disponible en una futura versión">
-                  <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
-                  Descargar JSON
-                </button>
-                <label class="btn btn--outline" style="opacity:.5;cursor:not-allowed" title="Disponible en una futura versión">
-                  <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clip-rule="evenodd"/></svg>
-                  Importar JSON
-                  <input type="file" accept=".json" style="display:none" disabled/>
-                </label>
-              </div>
-            </div>
-            <div class="conf-section" style="border-bottom:none">
-              <div class="danger-zone">
-                <h3>Zona de peligro <span class="badge-soon">Próximamente</span></h3>
-                <p>Restablecer todos los datos a los valores iniciales de muestra. Esta acción no se puede deshacer.</p>
-                <button class="btn btn--danger btn--sm" disabled title="Disponible en una futura versión">
-                  <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
-                  Restablecer datos de muestra
-                </button>
-              </div>
-            </div>
-          </div>
-
         </div>
 
         <!-- Panel lateral -->
@@ -303,7 +238,6 @@
 <script src="js/app.js"></script>
 <script type="module">
   import * as configuracionService from './js/services/configuracionService.js';
-  import { supabase } from './js/supabaseClient.js';
 
   /* ── Sesión y permisos ───────────────────────────────────────────────── */
   const sesion = Auth.require();
@@ -318,7 +252,6 @@
   window.guardarGeneral = guardarGeneral;
   window.guardarEmpresa = guardarEmpresa;
   window.guardarNotif = guardarNotif;
-  window.guardarSeguridad = guardarSeguridad;
 
   /* ── Tabs ────────────────────────────────────────────────────────────── */
   function switchTab(id, btn) {
@@ -480,34 +413,6 @@
     };
     prefSet('ep:pref:notif', cfg);
     Toast.success('Preferencias guardadas ✓ (el envío real de notificaciones no está disponible aún)');
-  }
-
-  /* ── Guardar: Seguridad — cambio de contraseña vía Supabase Auth ─────── */
-  async function guardarSeguridad(boton) {
-    const actual = document.getElementById('cfgPassActual').value;
-    const nueva = document.getElementById('cfgPassNueva').value;
-    const confirmacion = document.getElementById('cfgPassConfirm').value;
-
-    if (!sesion?.email) { Toast.error('No se pudo determinar el correo de la sesión actual'); return; }
-    if (!actual) { Toast.error('Ingresa tu contraseña actual'); return; }
-    if (!nueva) { Toast.error('Ingresa la nueva contraseña'); return; }
-    if (nueva.length < 8) { Toast.error('La contraseña debe tener al menos 8 caracteres'); return; }
-    if (nueva !== confirmacion) { Toast.error('Las contraseñas no coinciden'); return; }
-    if (actual === nueva) { Toast.warning('La nueva contraseña debe ser diferente a la actual'); return; }
-
-    if (boton) boton.disabled = true;
-    try {
-      const { error: reauthError } = await supabase.auth.signInWithPassword({ email: sesion.email, password: actual });
-      if (reauthError) { Toast.error('La contraseña actual es incorrecta'); return; }
-
-      const { error: updateError } = await supabase.auth.updateUser({ password: nueva });
-      if (updateError) { Toast.error(updateError.message || 'No se pudo actualizar la contraseña'); return; }
-
-      Toast.success('Contraseña actualizada ✓');
-      ['cfgPassActual', 'cfgPassNueva', 'cfgPassConfirm'].forEach(id => document.getElementById(id).value = '');
-    } finally {
-      if (boton) boton.disabled = false;
-    }
   }
 
   /* ── Info del sistema ─────────────────────────────────────────────────── */

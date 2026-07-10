@@ -27,6 +27,8 @@ const _limpiar = (campos = {}, parcial = false) => {
       : Number(permitidos.costo_referencial);
   }
   if (!parcial || 'estado' in permitidos) payload.estado = permitidos.estado || 'Activo';
+  if (!parcial || 'imagen_url' in permitidos) payload.imagen_url = permitidos.imagen_url ?? null;
+  if (!parcial || 'imagen_storage_path' in permitidos) payload.imagen_storage_path = permitidos.imagen_storage_path ?? null;
 
   Object.keys(payload).forEach(key => {
     if (payload[key] === undefined) delete payload[key];
@@ -38,7 +40,7 @@ const _limpiar = (campos = {}, parcial = false) => {
 export const getAll = async (filtros = {}) => {
   let query = supabase
     .from('decoraciones')
-    .select('id, nombre, tipo, descripcion, costo_referencial, estado, created_at, updated_at')
+    .select('id, nombre, tipo, descripcion, costo_referencial, estado, imagen_url, created_at, updated_at')
     .order('nombre');
 
   if (filtros.tipo) query = query.eq('tipo', filtros.tipo);
@@ -116,4 +118,62 @@ export const cambiarEstado = async (id, estado) => {
     return { data: null, error: 'Estado inválido' };
   }
   return actualizar(id, { estado });
+};
+
+/* ── Imagen de la decoración (Supabase Storage, bucket público `catalogo`) ─
+   Mismo patrón que platosService.subirImagen: sube primero, guarda la URL
+   en la fila y recién después borra el archivo anterior si había uno. */
+const CATALOGO_BUCKET = 'catalogo';
+const MAX_IMAGEN_MB = 5;
+const TIPOS_IMAGEN_PERMITIDOS = ['image/jpeg', 'image/png', 'image/webp'];
+
+/**
+ * Sube la imagen de una decoración ya existente (con id) y actualiza la fila.
+ * @param {number} id
+ * @param {File} file
+ * @param {string|null} pathAnterior — imagen_storage_path previo, si lo había
+ */
+export const subirImagen = async (id, file, pathAnterior) => {
+  if (!TIPOS_IMAGEN_PERMITIDOS.includes(file.type)) {
+    return { data: null, error: 'Solo se permiten imágenes JPG, PNG o WebP' };
+  }
+  if (file.size > MAX_IMAGEN_MB * 1024 * 1024) {
+    const mb = (file.size / (1024 * 1024)).toFixed(2);
+    return { data: null, error: `La imagen no debe superar ${MAX_IMAGEN_MB}MB (tu archivo pesa ${mb}MB)` };
+  }
+
+  const path = `decoraciones/${id}/${Date.now()}_${file.name}`;
+  const { error: uploadError } = await supabase.storage
+    .from(CATALOGO_BUCKET)
+    .upload(path, file, { upsert: false, contentType: file.type });
+  if (uploadError) return { data: null, error: _err(uploadError, 'subirImagen.upload') };
+
+  const { data: pub } = supabase.storage.from(CATALOGO_BUCKET).getPublicUrl(path);
+
+  const { data, error } = await actualizar(id, { imagen_url: pub.publicUrl, imagen_storage_path: path });
+  if (error) {
+    await supabase.storage.from(CATALOGO_BUCKET).remove([path]).catch(() => {});
+    return { data: null, error };
+  }
+
+  if (pathAnterior) {
+    const { error: delError } = await supabase.storage.from(CATALOGO_BUCKET).remove([pathAnterior]);
+    if (delError) console.warn('[decoracionesService] No se pudo borrar la imagen anterior en Storage:', delError);
+  }
+
+  return { data, error: null };
+};
+
+/**
+ * Quita la imagen de una decoración: borra el archivo físico (best-effort)
+ * y limpia las columnas en la fila.
+ * @param {number} id
+ * @param {string|null} path
+ */
+export const eliminarImagen = async (id, path) => {
+  if (path) {
+    const { error: delError } = await supabase.storage.from(CATALOGO_BUCKET).remove([path]);
+    if (delError) console.warn('[decoracionesService] No se pudo borrar la imagen en Storage:', delError);
+  }
+  return actualizar(id, { imagen_url: null, imagen_storage_path: null });
 };

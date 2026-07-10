@@ -63,7 +63,6 @@ const buildSidebarHTML = () => {
     }
   });
 
-  const userAvatar = _mkAvatar(user?.nombre || 'U', user?.id || 0, 32, user?.avatar);
   const logo = AppLogo.get();
   const brandLogoHTML = logo?.url
     ? `<img src="${logo.url}" alt="Logo" style="width:100%;height:100%;object-fit:contain;border-radius:8px"/>`
@@ -94,13 +93,6 @@ const buildSidebarHTML = () => {
       </div>
       <nav class="sidebar__nav">${navHTML}</nav>
       <div class="sidebar__footer">
-        <a href="perfil.html" class="sidebar-user" data-tooltip="${escHtml(user?.nombre || 'Mi Perfil')}" style="text-decoration:none;display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;transition:background .15s;cursor:pointer" onmouseover="this.style.background='rgba(255,255,255,.06)'" onmouseout="this.style.background=''">
-          ${userAvatar}
-          <div class="sidebar-user__info">
-            <span class="sidebar-user__name">${escHtml(user?.nombre || '—')}</span>
-            <span class="sidebar-user__role">${escHtml(user?.rol || '')}</span>
-          </div>
-        </a>
         <button onclick="Auth.logout()" class="nav-item nav-item--logout" data-tooltip="Cerrar sesión" style="background:none;border:none;width:100%;cursor:pointer;margin-top:2px">
           <svg class="nav-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 102 0V4a1 1 0 00-1-1zm10.293 9.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L14.586 9H7a1 1 0 100 2h7.586l-1.293 1.293z" clip-rule="evenodd"/></svg>
           <span class="nav-label">Cerrar sesión</span>
