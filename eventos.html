@@ -171,11 +171,14 @@ window.solicitarResena = solicitarResena;
 
 /* ── Init & Carga ───────────────────────────────────────────────────── */
 async function inicializar() {
-  const resTipos = await eventosService.getTipos();
-  if (resTipos.data) tiposEvento = resTipos.data;
-
-  const resClientes = await clientesService.getAll();
-  if (resClientes.data) clientesDisponibles = resClientes.data;
+  const [resTipos, resClientes] = await Promise.all([
+    eventosService.getTipos(),
+    clientesService.getAll(),
+  ]);
+  if (resTipos.error) Toast.error('No se pudieron cargar los tipos de evento');
+  if (resClientes.error) Toast.error('No se pudieron cargar los clientes');
+  tiposEvento = resTipos.data || [];
+  clientesDisponibles = resClientes.data || [];
 
   poblarTipos(document.getElementById('filtroTipo'), true);
   await cargarEventos();
@@ -272,10 +275,14 @@ function renderTabla() {
 }
 
 /* ── Modal & CRUD ───────────────────────────────────────────────────── */
-function abrirModal() {
+async function abrirModal() {
   editandoId = null;
   document.getElementById('modalTitulo').textContent = 'Nuevo Evento';
   limpiarForm();
+  // Si se abre el modal antes de que inicializar() termine de traer
+  // clientes/tipos (ej. justo al entrar a la página), esperar acá evita
+  // mostrar los selects vacíos.
+  await datosListos;
   poblarClientes();
   poblarTipos(document.getElementById('fTipo'), false);
   document.getElementById('modalOverlay').classList.add('modal-overlay--open');
@@ -497,7 +504,7 @@ async function eliminarAnexo(id, storagePath) {
 }
 
 /* ── Init ───────────────────────────────────────────────────────────── */
-sessionReady.then(inicializar);
+const datosListos = sessionReady.then(inicializar);
 </script>
 </body>
 </html>
