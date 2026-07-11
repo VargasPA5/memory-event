@@ -96,9 +96,7 @@
       <div class="form-group"><label>Tipo</label><select class="form-select" id="fTipo"><option>Boda</option><option>Cumpleaños</option><option>Corporativo</option><option>Graduación</option><option>Quinceañero</option><option>Otros</option></select></div>
       <div class="form-group">
         <label>Cliente</label>
-        <input type="text" class="form-input" id="fClienteBuscar" list="clientesOptions" placeholder="Buscar cliente por nombre, email o teléfono"/>
-        <input type="hidden" id="fCliente"/>
-        <datalist id="clientesOptions"></datalist>
+        <select class="form-select" id="fCliente"></select>
       </div>
     </div>
     <div class="form-row">
@@ -153,10 +151,11 @@ import * as clientesService from './js/services/clientesService.js';
 let editandoId = null;
 let todosLosEventos = [];
 let tiposEvento = [];
+// Catálogo completo de clientes, precargado una vez al iniciar la página —
+// el select de "Cliente" siempre muestra todos los registrados.
 let clientesDisponibles = [];
 let anexoEventoId = null;
 let anexosActuales = [];
-let clienteSearchTimer = null;
 
 /* ── Exposición Global ──────────────────────────────────────────────── */
 window.renderTabla = renderTabla;
@@ -175,6 +174,9 @@ async function inicializar() {
   const resTipos = await eventosService.getTipos();
   if (resTipos.data) tiposEvento = resTipos.data;
 
+  const resClientes = await clientesService.getAll();
+  if (resClientes.data) clientesDisponibles = resClientes.data;
+
   poblarTipos(document.getElementById('filtroTipo'), true);
   await cargarEventos();
 }
@@ -192,46 +194,16 @@ function poblarTipos(selectEl, incluyeTodos = false) {
 const clienteLabel = (c) => [c.nombre, c.email, c.telefono].filter(Boolean).join(' · ');
 
 function poblarClientes() {
-  const list = document.getElementById('clientesOptions');
-  list.innerHTML = '';
+  const sel = document.getElementById('fCliente');
+  const actual = sel.value;
+  sel.innerHTML = '<option value="">— Seleccionar cliente —</option>';
   clientesDisponibles.forEach(c => {
     const opt = document.createElement('option');
-    opt.value = clienteLabel(c);
-    opt.dataset.id = c.id;
-    list.appendChild(opt);
+    opt.value = c.id;
+    opt.textContent = clienteLabel(c);
+    sel.appendChild(opt);
   });
-}
-
-function resolverClienteDesdeBusqueda() {
-  const input = document.getElementById('fClienteBuscar');
-  const hidden = document.getElementById('fCliente');
-  const texto = input.value.trim().toLowerCase();
-  const cliente = clientesDisponibles.find(c => clienteLabel(c).toLowerCase() === texto || String(c.id) === hidden.value);
-  hidden.value = cliente?.id || '';
-  return cliente || null;
-}
-
-async function buscarClientesEvento() {
-  const input = document.getElementById('fClienteBuscar');
-  const hidden = document.getElementById('fCliente');
-  hidden.value = '';
-
-  const query = input.value.trim();
-  if (query.length < 2) {
-    clientesDisponibles = [];
-    poblarClientes();
-    return;
-  }
-
-  const { data, error } = await clientesService.buscar(query);
-  if (error) {
-    Toast.error('No se pudo buscar clientes');
-    return;
-  }
-
-  clientesDisponibles = data || [];
-  poblarClientes();
-  resolverClienteDesdeBusqueda();
+  if (actual) sel.value = actual;
 }
 
 async function cargarEventos() {
@@ -304,7 +276,6 @@ function abrirModal() {
   editandoId = null;
   document.getElementById('modalTitulo').textContent = 'Nuevo Evento';
   limpiarForm();
-  clientesDisponibles = [];
   poblarClientes();
   poblarTipos(document.getElementById('fTipo'), false);
   document.getElementById('modalOverlay').classList.add('modal-overlay--open');
@@ -320,7 +291,6 @@ document.getElementById('modalOverlay').addEventListener('click', e => { if (e.t
 function limpiarForm() {
   ['fNombre','fFecha','fHora','fInvitados','fPresupuesto','fLugar','fNotas'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('fCliente').value = '';
-  document.getElementById('fClienteBuscar').value = '';
   document.getElementById('fTipo').innerHTML = '';
   document.getElementById('fEstado').selectedIndex = 0;
 }
@@ -328,7 +298,7 @@ function limpiarForm() {
 async function guardarEvento() {
   const nombre     = document.getElementById('fNombre').value.trim();
   const tipoId     = parseInt(document.getElementById('fTipo').value);
-  const clienteId  = Number(document.getElementById('fCliente').value || resolverClienteDesdeBusqueda()?.id || 0);
+  const clienteId  = Number(document.getElementById('fCliente').value || 0);
   const fecha      = document.getElementById('fFecha').value;
   const hora       = document.getElementById('fHora').value;
   const invitados  = parseInt(document.getElementById('fInvitados').value) || 0;
@@ -371,15 +341,13 @@ function editarEvento(id) {
   const ev = todosLosEventos.find(x => x.id === id);
   if (!ev) return;
   editandoId = id;
-  clientesDisponibles = ev.cliente ? [ev.cliente] : [];
   poblarClientes();
   poblarTipos(document.getElementById('fTipo'), false);
-  
+
   document.getElementById('modalTitulo').textContent = 'Editar Evento';
   document.getElementById('fNombre').value     = ev.nombre;
   document.getElementById('fTipo').value       = ev.tipo_evento_id;
   document.getElementById('fCliente').value    = ev.cliente_id;
-  document.getElementById('fClienteBuscar').value = ev.cliente ? clienteLabel(ev.cliente) : '';
   document.getElementById('fFecha').value      = ev.fecha;
   document.getElementById('fHora').value       = ev.hora ? ev.hora.substring(0,5) : '';
   document.getElementById('fInvitados').value  = ev.invitados || '';
@@ -530,10 +498,6 @@ async function eliminarAnexo(id, storagePath) {
 
 /* ── Init ───────────────────────────────────────────────────────────── */
 sessionReady.then(inicializar);
-document.getElementById('fClienteBuscar').addEventListener('input', () => {
-  clearTimeout(clienteSearchTimer);
-  clienteSearchTimer = setTimeout(buscarClientesEvento, 250);
-});
 </script>
 </body>
 </html>
